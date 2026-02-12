@@ -143,7 +143,7 @@ service cloud.firestore {
 
     // --- /events/{eventId} ---
     match /events/{eventId} {
-      allow get:    if isAdminOrAbove(eventId);
+      allow get:    if isAdminOrAbove(eventId) || isTeamUserForEvent(eventId);
       allow list:   if isSuperAdmin();
       allow create: if isSuperAdmin() && hasCorrectIdOnCreate(eventId);
       allow update: if isAdminOrAbove(eventId) && areIdsImmutable();
@@ -213,10 +213,10 @@ service cloud.firestore {
       allow get, list: if isSuperAdmin();
     }
     match /{path=**}/transactions/{transactionId} {
-      allow get, list: if isSuperAdmin();
+      allow get, list: if isSuperAdmin() || isAdminOrAbove(resource.data.eventId);
     }
     match /{path=**}/loans/{loanId} {
-      allow get, list: if isSuperAdmin();
+      allow get, list: if isSuperAdmin() || isAdminOrAbove(resource.data.eventId);
     }
     match /{path=**}/payment_requests/{requestId} {
       allow get, list: if isSuperAdmin();

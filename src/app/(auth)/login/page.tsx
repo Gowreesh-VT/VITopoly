@@ -30,16 +30,31 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    setError(null);
     if (!email || !password) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: "Please enter both email and password.",
-      });
+      setError("Please enter both email and password.");
       return;
     }
-    initiateEmailSignIn(auth, email, password);
+    
+    setLoading(true);
+    try {
+      await initiateEmailSignIn(auth, email, password);
+      // Success is handled by the useEffect redirect
+    } catch (err: any) {
+      console.error("Login failed:", err);
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError("Invalid email or password.");
+      } else if (err.code === 'auth/too-many-requests') {
+        setError("Too many failed attempts. Please try again later.");
+      } else {
+        setError("Failed to sign in. Please check your connection and try again.");
+      }
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -139,10 +154,15 @@ export default function LoginPage() {
               onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
             />
           </div>
+          {error && (
+            <div className="text-sm text-destructive font-medium text-center">
+              {error}
+            </div>
+          )}
         </CardContent>
         <CardFooter>
-          <Button className="w-full" onClick={handleLogin}>
-            Sign in
+          <Button className="w-full" onClick={handleLogin} disabled={loading}>
+            {loading ? "Signing in..." : "Sign in"}
           </Button>
         </CardFooter>
       </Card>

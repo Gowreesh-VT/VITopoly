@@ -12,46 +12,7 @@ type QrScannerDialogProps = {
 
 export function QrScannerDialog({ onScan, children }: QrScannerDialogProps) {
   const [open, setOpen] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (open) {
-      const getCameraPermission = async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          setHasCameraPermission(true);
-
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
-          // Stop tracks when dialog closes
-          return () => {
-            stream.getTracks().forEach(track => track.stop());
-          };
-        } catch (error) {
-          console.error('Error accessing camera:', error);
-          setHasCameraPermission(false);
-          toast({
-            variant: 'destructive',
-            title: 'Camera Access Denied',
-            description: 'Please enable camera permissions in your browser settings to use the scanner.',
-          });
-        }
-      };
-
-      const cleanup = getCameraPermission();
-      
-      return () => {
-        // @ts-ignore
-        if (cleanup && cleanup.then) {
-            // @ts-ignore
-            cleanup.then(c => c && c());
-        }
-      };
-    }
-  }, [open, toast]);
 
   const handleDecode = (result: string) => {
     onScan(result);
@@ -63,53 +24,62 @@ export function QrScannerDialog({ onScan, children }: QrScannerDialogProps) {
   };
 
   const handleError = (error: any) => {
-    console.error(error);
-    if (error.name !== "NotFoundException") { // Ignore "not found" errors which happen during scanning
+    console.warn("QR Scan Error:", error);
+    // Ignore common non-critical errors
+    if (error?.name === 'NotFoundException') return;
+    
+    // Handle OverconstrainedError specifically
+    if (error?.name === 'OverconstrainedError') {
         toast({
             variant: 'destructive',
-            title: 'Scan Error',
-            description: error?.message || 'Failed to scan QR code.',
+            title: 'Camera Error',
+            description: 'Your camera does not support the requested settings. Please try a different device.',
         });
+        return;
+    }
+
+    if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
+        toast({
+            variant: 'destructive',
+            title: 'Permission Denied',
+            description: 'Please grant camera access to use the scanner.',
+        });
+        return;
     }
   };
-  
-  // Conditionally render QrScanner only when permission is granted
-  const renderScanner = () => {
-      if (hasCameraPermission === null) {
-          return <div className="w-full aspect-square bg-muted animate-pulse" />;
-      }
-      if (hasCameraPermission) {
-          return (
-             <div className="overflow-hidden rounded-md">
-                 <Scanner
-                    onScan={(result) => result?.[0]?.rawValue && handleDecode(result[0].rawValue)}
-                    onError={handleError}
-                    styles={{ container: { width: '100%', paddingTop: '100%' }, video: { objectFit: 'cover' } }}
-                />
-             </div>
-          )
-      }
-      return (
-         <Alert variant="destructive">
-            <AlertTitle>Camera Access Required</AlertTitle>
-            <AlertDescription>
-                Please allow camera access in your browser to use the scanner.
-            </AlertDescription>
-         </Alert>
-      )
-  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Scan QR Code</DialogTitle>
           <DialogDescription>
             Center the QR code within the frame to scan it.
           </DialogDescription>
         </DialogHeader>
-        {renderScanner()}
+        <div className="aspect-square w-full overflow-hidden rounded-md bg-muted relative">
+            {open && (
+                <Scanner
+                    onScan={(result) => result?.[0]?.rawValue && handleDecode(result[0].rawValue)}
+                    onError={handleError}
+                    constraints={{ 
+                        facingMode: 'environment',
+                        aspectRatio: { min: 1, max: 1 }
+                    }}
+                    styles={{
+                        container: { width: '100%', height: '100%' },
+                        video: { width: '100%', height: '100%', objectFit: 'cover' }
+                    }}
+                    components={{
+                        onOff: false,
+                        torch: false,
+                        zoom: false,
+                        finder: false,
+                    }}
+                />
+            )}
+        </div>
       </DialogContent>
     </Dialog>
   );
