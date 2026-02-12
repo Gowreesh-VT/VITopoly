@@ -1,0 +1,164 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserProfile() {
+      let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(userDocPath) ? get(userDocPath).data : null;
+    }
+
+    function isSuperAdmin() {
+      let userProfile = getUserProfile();
+      return isSignedIn() && 
+             userProfile != null && 
+             userProfile.role == 'SUPER_ADMIN';
+    }
+
+    function isEventAdmin(eventId) {
+      let userProfile = getUserProfile();
+      return isSignedIn() &&
+             userProfile != null &&
+             userProfile.role == 'ADMIN' &&
+             userProfile.eventId == eventId;
+    }
+
+    function isEventAdminOrSuperAdmin(eventId) {
+      return isSuperAdmin() || isEventAdmin(eventId);
+    }
+    
+    function isTeamUserForEvent(eventId) {
+      let userProfile = getUserProfile();
+      return isSignedIn() &&
+             userProfile != null &&
+             userProfile.role == 'TEAM' &&
+             userProfile.eventId == eventId;
+    }
+
+    function isTeamMember(eventId, teamId) {
+      let userProfile = getUserProfile();
+      return isTeamUserForEvent(eventId) && 
+             userProfile != null &&
+             userProfile.teamId == teamId;
+    }
+    
+    function hasCorrectIdOnCreate(docId) {
+      return request.resource.data.id == docId;
+    }
+    
+    function areIdsImmutable() {
+      return request.resource.data.id == resource.data.id;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function canCreatePaymentRequest(eventId) {
+      let userProfile = getUserProfile();
+      return isTeamUserForEvent(eventId) &&
+             userProfile != null &&
+             request.resource.data.fromTeamId == userProfile.teamId;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
+      allow list: if isSuperAdmin();
+      allow write: if isOwner(userId) || isSuperAdmin();
+    }
+    
+    match /game_config/{configId} {
+        allow read: if isSignedIn();
+        allow write: if isSuperAdmin();
+    }
+
+    match /events/{eventId} {
+      allow get: if isEventAdminOrSuperAdmin(eventId);
+      allow list: if isSuperAdmin();
+      allow create: if isSuperAdmin() && hasCorrectIdOnCreate(eventId);
+      allow update: if isEventAdminOrSuperAdmin(eventId) && areIdsImmutable();
+      allow delete: if isSuperAdmin();
+
+      match /admins/{adminId} {
+        allow read, write: if isSuperAdmin();
+      }
+      
+      match /payment_requests/{requestId} {
+        allow read, update, delete: if isEventAdminOrSuperAdmin(eventId);
+        allow create: if canCreatePaymentRequest(eventId);
+      }
+
+      match /teams/{teamId} {
+        allow get: if isEventAdminOrSuperAdmin(eventId) || isTeamMember(eventId, teamId);
+        allow list: if isEventAdminOrSuperAdmin(eventId) || isTeamUserForEvent(eventId);
+        allow create, update, delete: if isEventAdminOrSuperAdmin(eventId);
+
+        match /transactions/{transactionId} {
+          allow read: if isEventAdminOrSuperAdmin(eventId) || isTeamMember(eventId, teamId);
+          allow write: if isEventAdminOrSuperAdmin(eventId);
+        }
+
+        match /loans/{loanId} {
+          allow read: if isEventAdminOrSuperAdmin(eventId) || isTeamMember(eventId, teamId);
+          allow write: if isEventAdminOrSuperAdmin(eventId);
+        }
+
+        match /notifications/{notificationId} {
+          allow read: if isEventAdminOrSuperAdmin(eventId) || isTeamMember(eventId, teamId);
+          allow write: if isEventAdminOrSuperAdmin(eventId);
+        }
+      }
+    }
+    
+    // Global collections for game management
+    match /cohorts/{cohortId} {
+        allow get: if isSignedIn();
+        allow list: if isSuperAdmin();
+        allow write: if isSuperAdmin();
+    }
+    
+    match /properties/{propertyId} {
+        allow read: if isSignedIn();
+        allow write: if isEventAdminOrSuperAdmin(request.resource.data.eventId) || isSuperAdmin();
+    }
+    
+    match /tokens/{tokenId} {
+        allow read: if isSignedIn();
+        allow write: if isEventAdminOrSuperAdmin(request.resource.data.eventId) || isSuperAdmin();
+    }
+    
+    match /auctions/{auctionId} {
+        allow read: if isSignedIn();
+        allow write: if isEventAdminOrSuperAdmin(request.resource.data.eventId) || isSuperAdmin();
+    }
+
+    match /leaderboards/{leaderboardId} {
+        allow read: if isSignedIn();
+        allow write: if isSuperAdmin(); // Should be written by cloud function
+    }
+
+    match /audit_logs/{logId} {
+        allow read: if isSuperAdmin();
+        allow create: if isSuperAdmin(); // Should be written by cloud function or admin actions
+        allow update, delete: if false;
+    }
+    
+    // Collection Group Rules
+    match /{path=**}/teams/{teamId} {
+      allow get, list: if isSuperAdmin();
+    }
+    match /{path=**}/admins/{adminId} {
+      allow get, list: if isSuperAdmin();
+    }
+    match /{path=**}/transactions/{transactionId} {
+      allow get, list: if isSuperAdmin();
+    }
+    match /{path=**}/loans/{loanId} {
+      allow get, list: if isSuperAdmin();
+    }
+  }
+}

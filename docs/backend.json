@@ -1,0 +1,207 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User Profile",
+      "type": "object",
+      "description": "Represents a user's profile information.",
+      "properties": {
+        "id": { "type": "string", "description": "The user's UID." },
+        "email": { "type": "string", "description": "The user's email.", "format": "email" },
+        "displayName": { "type": "string", "description": "The user's display name." },
+        "role": { "type": "string", "description": "The user's role.", "enum": ["SUPER_ADMIN", "ADMIN", "TEAM"] },
+        "teamId": { "type": "string", "description": "The ID of the team the user belongs to (if any)." },
+        "eventId": { "type": "string", "description": "The ID of the event the user is associated with (for Admins)." }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "Team": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Team",
+      "type": "object",
+      "description": "Represents a team within the V-Cash system.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the Team entity." },
+        "eventId": { "type": "string", "description": "Reference to the Event this team belongs to." },
+        "name": { "type": "string", "description": "The name of the team." },
+        "balance": { "type": "number", "description": "The current balance of the team." },
+        "creditScore": { "type": "number", "description": "The credit score of the team." },
+        "status": { "type": "string", "description": "The status of the team.", "enum": ["ACTIVE", "SUSPENDED"] },
+        "hasActiveLoan": { "type": "boolean", "description": "Indicates if the team has an active loan." },
+        "activeLoanId": { "type": ["string", "null"], "description": "The ID of the active loan, if one exists." },
+        "cohortId": { "type": ["string", "null"], "description": "The ID of the cohort the team belongs to." },
+        "isEliminated": { "type": "boolean", "description": "Indicates if the team has been eliminated." },
+        "qualifiedToNextRound": { "type": "boolean", "description": "Indicates if the team qualified for the next round." },
+        "currentScore": { "type": "number", "description": "The team's current calculated score for the round." },
+        "rankInCohort": { "type": "number", "description": "The team's rank within its cohort." }
+      },
+      "required": ["id", "eventId", "name", "balance", "creditScore", "status", "isEliminated"]
+    },
+    "Admin": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Admin",
+      "type": "object",
+      "description": "Represents an administrator user in the system.",
+      "properties": {
+        "id": { "type": "string" }, "eventId": { "type": "string" }, "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" }, "role": { "type": "string" }
+      },
+      "required": ["id", "eventId", "name", "email", "role"]
+    },
+    "Event": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Event",
+      "type": "object",
+      "description": "Represents an event within the V-Cash system.",
+      "properties": {
+        "id": { "type": "string" }, "name": { "type": "string" }, "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" }, "initialTeamBalance": { "type": "number" },
+        "loanLimit": { "type": "number" }
+      },
+      "required": ["id", "name", "startDate", "endDate", "initialTeamBalance", "loanLimit"]
+    },
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a financial transaction within the system.",
+      "properties": {
+        "id": { "type": "string" }, "eventId": { "type": "string" }, "timestamp": { "type": "string", "format": "date-time" },
+        "fromTeamId": { "type": "string" }, "fromTeamName": { "type": "string" }, "toTeamId": { "type": "string" },
+        "toTeamName": { "type": "string" }, "adminId": { "type": "string" },
+        "type": { "type": "string", "enum": ["SYSTEM_CREDIT", "REWARD", "PENALTY", "RENT", "SETTLEMENT", "LOAN_ISSUED", "LOAN_REPAID", "SUPER_ADMIN_OVERRIDE", "PROPERTY_PURCHASE", "TOKEN_ACTION"] },
+        "amount": { "type": "number" }, "reason": { "type": "string" }, "balanceAfterTransaction": { "type": "number" }
+      },
+      "required": ["id", "eventId", "timestamp", "adminId", "type", "amount", "reason"]
+    },
+    "Loan": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Loan", "type": "object", "description": "Represents a loan issued to a team.",
+      "properties": {
+        "id": { "type": "string" }, "eventId": { "type": "string" }, "teamId": { "type": "string" },
+        "adminId": { "type": "string" }, "amount": { "type": "number" }, "issueTime": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["ACTIVE", "REPAID"] }
+      },
+      "required": ["id", "eventId", "teamId", "adminId", "amount", "issueTime", "status"]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification", "type": "object", "description": "Represents an in-app notification for a user.",
+      "properties": {
+        "id": { "type": "string" }, "eventId": { "type": "string" }, "teamId": { "type": "string" },
+        "title": { "type": "string" }, "message": { "type": "string" }, "type": { "type": "string" },
+        "read": { "type": "boolean" }, "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "eventId", "teamId", "title", "message", "type", "read", "timestamp"]
+    },
+    "PaymentRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Payment Request", "type": "object",
+      "description": "A request for a payment from one team to another, pending admin approval.",
+      "properties": {
+        "id": { "type": "string" }, "eventId": { "type": "string" }, "fromTeamId": { "type": "string" },
+        "fromTeamName": { "type": "string" }, "toTeamId": { "type": "string" }, "toTeamName": { "type": "string" },
+        "amount": { "type": "number" }, "reason": { "type": "string" }, "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] }
+      },
+      "required": ["id", "eventId", "fromTeamId", "toTeamId", "fromTeamName", "toTeamName", "amount", "reason", "timestamp", "status"]
+    },
+    "GameConfig": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Game Config", "type": "object", "description": "Singleton document storing the global game state.",
+      "properties": {
+        "id": { "type": "string" },
+        "currentRound": { "type": "number", "description": "The current active round of the game." },
+        "roundStatus": { "type": "string", "enum": ["REGISTRATION", "ROUND_1_ACTIVE", "ROUND_1_LOCKED", "ROUND_2_ACTIVE", "AUCTION_PHASE", "ROUND_3_ACTIVE", "FINALIZED"] },
+        "roundStartTime": { "type": "string", "format": "date-time" }, "roundEndTime": { "type": "string", "format": "date-time" },
+        "cashWeight": { "type": "number" }, "propertyWeight": { "type": "number" },
+        "tokenWeight": { "type": "number" }, "creditWeight": { "type": "number" }
+      },
+      "required": ["id", "currentRound", "roundStatus", "roundStartTime", "roundEndTime", "cashWeight", "propertyWeight", "tokenWeight", "creditWeight"]
+    },
+    "Cohort": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Cohort", "type": "object", "description": "A group of teams competing together.",
+      "properties": {
+        "id": { "type": "string" }, "name": { "type": "string" }, "teamIds": { "type": "array", "items": { "type": "string" } },
+        "moderatorId": { "type": "string" }, "status": { "type": "string", "enum": ["ACTIVE", "COMPLETED"] },
+        "eventId": { "type": "string", "description": "The ID of the event this cohort belongs to." }
+      },
+      "required": ["id", "name", "teamIds", "moderatorId", "status", "eventId"]
+    },
+    "Property": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Property", "type": "object", "description": "A virtual property that can be owned by a team.",
+      "properties": {
+        "id": { "type": "string" }, "name": { "type": "string" }, "cohortId": { "type": "string" },
+        "baseValue": { "type": "number" }, "rentValue": { "type": "number" }, "ownerTeamId": { "type": ["string", "null"] }, "ownerTeamName": { "type": ["string", "null"] },
+        "status": { "type": "string", "enum": ["UNOWNED", "OWNED", "SEIZED", "AUCTION"] },
+        "eventId": { "type": "string", "description": "The ID of the event this property belongs to." }
+      },
+      "required": ["id", "name", "cohortId", "baseValue", "rentValue", "status", "eventId"]
+    },
+    "Token": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Token", "type": "object", "description": "Special tokens a team can hold.",
+      "properties": {
+        "id": { "type": "string" }, "teamId": { "type": "string" }, "strategyTokens": { "type": "number" },
+        "defenseTokens": { "type": "number" }, "usedTokensHistory": { "type": "array", "items": { "type": "object" } },
+        "eventId": { "type": "string", "description": "The ID of the event these tokens belong to." }
+      },
+      "required": ["id", "teamId", "strategyTokens", "defenseTokens", "eventId"]
+    },
+    "Auction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Auction", "type": "object", "description": "Represents a property auction.",
+      "properties": {
+        "id": { "type": "string" }, "propertyId": { "type": "string" }, "cohortId": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "CLOSED"] }, "winningTeamId": { "type": "string" },
+        "winningBid": { "type": "number" },
+        "eventId": { "type": "string", "description": "The ID of the event this auction belongs to." }
+      },
+      "required": ["id", "propertyId", "cohortId", "status", "eventId"]
+    },
+    "Leaderboard": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Leaderboard", "type": "object", "description": "Stores rankings for cohorts and overall.",
+      "properties": {
+        "id": { "type": "string" }, "cohortId": { "type": "string" },
+        "rankings": { "type": "array", "items": { "type": "object" } },
+        "overallRankings": { "type": "array", "items": { "type": "object" } },
+        "eventId": { "type": "string", "description": "The ID of the event this leaderboard belongs to." }
+      },
+      "required": ["id", "rankings", "eventId"]
+    },
+    "AuditLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Audit Log", "type": "object", "description": "Logs for critical system events.",
+      "properties": {
+        "id": { "type": "string" }, "timestamp": { "type": "string", "format": "date-time" },
+        "adminId": { "type": "string" }, "action": { "type": "string" }, "details": { "type": "object" }
+      },
+      "required": ["id", "timestamp", "adminId", "action"]
+    }
+  },
+  "auth": {
+    "providers": ["password", "anonymous"]
+  },
+  "firestore": {
+    "structure": [
+      { "path": "/users/{userId}", "definition": { "entityName": "UserProfile", "schema": { "$ref": "#/backend/entities/UserProfile" } } },
+      { "path": "/events/{eventId}", "definition": { "entityName": "Event", "schema": { "$ref": "#/backend/entities/Event" } } },
+      { "path": "/events/{eventId}/admins/{adminId}", "definition": { "entityName": "Admin", "schema": { "$ref": "#/backend/entities/Admin" } } },
+      { "path": "/events/{eventId}/teams/{teamId}", "definition": { "entityName": "Team", "schema": { "$ref": "#/backend/entities/Team" } } },
+      { "path": "/events/{eventId}/teams/{teamId}/transactions/{transactionId}", "definition": { "entityName": "Transaction", "schema": { "$ref": "#/backend/entities/Transaction" } } },
+      { "path": "/events/{eventId}/teams/{teamId}/loans/{loanId}", "definition": { "entityName": "Loan", "schema": { "$ref": "#/backend/entities/Loan" } } },
+      { "path": "/events/{eventId}/teams/{teamId}/notifications/{notificationId}", "definition": { "entityName": "Notification", "schema": { "$ref": "#/backend/entities/Notification" } } },
+      { "path": "/events/{eventId}/payment_requests/{requestId}", "definition": { "entityName": "PaymentRequest", "schema": { "$ref": "#/backend/entities/PaymentRequest" } } },
+      { "path": "/game_config/{configId}", "definition": { "entityName": "GameConfig", "schema": { "$ref": "#/backend/entities/GameConfig" } } },
+      { "path": "/cohorts/{cohortId}", "definition": { "entityName": "Cohort", "schema": { "$ref": "#/backend/entities/Cohort" } } },
+      { "path": "/properties/{propertyId}", "definition": { "entityName": "Property", "schema": { "$ref": "#/backend/entities/Property" } } },
+      { "path": "/tokens/{tokenId}", "definition": { "entityName": "Token", "schema": { "$ref": "#/backend/entities/Token" } } },
+      { "path": "/auctions/{auctionId}", "definition": { "entityName": "Auction", "schema": { "$ref": "#/backend/entities/Auction" } } },
+      { "path": "/leaderboards/{leaderboardId}", "definition": { "entityName": "Leaderboard", "schema": { "$ref": "#/backend/entities/Leaderboard" } } },
+      { "path": "/audit_logs/{logId}", "definition": { "entityName": "AuditLog", "schema": { "$ref": "#/backend/entities/AuditLog" } } }
+    ]
+  }
+}
