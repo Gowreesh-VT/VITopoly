@@ -3,151 +3,209 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // =====================================================================
+    // HELPER FUNCTIONS
+    // =====================================================================
+
+    // Returns true if the request comes from an authenticated user.
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // Fetches the authenticated user's profile document from the /users collection.
+    // Uses only get() to minimise document access calls (avoids exists()+get() double call).
     function getUserProfile() {
-      let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(userDocPath) ? get(userDocPath).data : null;
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    // Returns true if the authenticated user has the SUPER_ADMIN role.
     function isSuperAdmin() {
-      let userProfile = getUserProfile();
-      return isSignedIn() && 
-             userProfile != null && 
-             userProfile.role == 'SUPER_ADMIN';
+      return isSignedIn()
+          && getUserProfile().role == 'SUPER_ADMIN';
     }
 
-    function isEventAdmin(eventId) {
-      let userProfile = getUserProfile();
-      return isSignedIn() &&
-             userProfile != null &&
-             userProfile.role == 'ADMIN' &&
-             userProfile.eventId == eventId;
+    // Returns true if the user is a super-admin OR an admin assigned to this event.
+    // Reads the profile only ONCE to avoid redundant get() calls.
+    function isAdminOrAbove(eventId) {
+      let profile = getUserProfile();
+      return isSignedIn()
+          && (profile.role == 'SUPER_ADMIN'
+              || (profile.role == 'ADMIN' && profile.eventId == eventId));
     }
 
-    function isEventAdminOrSuperAdmin(eventId) {
-      return isSuperAdmin() || isEventAdmin(eventId);
-    }
-    
+    // Returns true if the authenticated user is a TEAM member assigned to the given event.
     function isTeamUserForEvent(eventId) {
-      let userProfile = getUserProfile();
-      return isSignedIn() &&
-             userProfile != null &&
-             userProfile.role == 'TEAM' &&
-             userProfile.eventId == eventId;
+      return isSignedIn()
+          && getUserProfile().role == 'TEAM'
+          && getUserProfile().eventId == eventId;
     }
 
+    // Returns true if the authenticated user is a member of the specific team.
     function isTeamMember(eventId, teamId) {
-      let userProfile = getUserProfile();
-      return isTeamUserForEvent(eventId) && 
-             userProfile != null &&
-             userProfile.teamId == teamId;
+      let profile = getUserProfile();
+      return isSignedIn()
+          && profile.role == 'TEAM'
+          && profile.eventId == eventId
+          && profile.teamId == teamId;
     }
-    
-    function hasCorrectIdOnCreate(docId) {
-      return request.resource.data.id == docId;
-    }
-    
-    function areIdsImmutable() {
-      return request.resource.data.id == resource.data.id;
-    }
-    
+
+    // Returns true if the authenticated user is the owner of the given userId document.
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    function canCreatePaymentRequest(eventId) {
-      let userProfile = getUserProfile();
-      return isTeamUserForEvent(eventId) &&
-             userProfile != null &&
-             request.resource.data.fromTeamId == userProfile.teamId;
+    // Returns true if the document ID field matches the Firestore document ID on create.
+    function hasCorrectIdOnCreate(docId) {
+      return request.resource.data.id == docId;
     }
 
+    // Returns true if the 'id' field has not been changed on an update.
+    function areIdsImmutable() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+
+    // =====================================================================
+    // TOP-LEVEL COLLECTIONS
+    // =====================================================================
+
+    // --- /users/{userId} ---
+    // User profiles. Created on first login or by super-admin.
+    // Super-admin can read all; users can read/write their own.
     match /users/{userId} {
-      allow get: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
-      allow list: if isSuperAdmin();
-      allow write: if isOwner(userId) || isSuperAdmin();
-    }
-    
-    match /game_config/{configId} {
-        allow read: if isSignedIn();
-        allow write: if isSuperAdmin();
+      allow get:    if isSignedIn() && (isOwner(userId) || isSuperAdmin());
+      allow list:   if isSuperAdmin();
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isOwner(userId) || isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
+    // --- /game_config/{configId} ---
+    // Global game configuration (e.g., current active event).
+    // Any signed-in user can read; only super-admin can write.
+    match /game_config/{configId} {
+      allow read:  if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // --- /cohorts/{cohortId} ---
+    // Cohort groupings for teams.
+    // Any signed-in user can read; only super-admin can write.
+    match /cohorts/{cohortId} {
+      allow read:  if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // --- /properties/{propertyId} ---
+    // Game properties that can be owned by teams.
+    // Any signed-in user can read; admins and super-admin can write.
+    match /properties/{propertyId} {
+      allow read:  if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // --- /tokens/{tokenId} ---
+    // Game tokens assigned to teams.
+    // Any signed-in user can read; admins and super-admin can write.
+    match /tokens/{tokenId} {
+      allow read:  if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // --- /auctions/{auctionId} ---
+    // Game auction events.
+    // Any signed-in user can read; admins and super-admin can write.
+    match /auctions/{auctionId} {
+      allow read:  if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // --- /leaderboards/{leaderboardId} ---
+    // Leaderboard data, typically written by cloud functions.
+    // Any signed-in user can read; only super-admin can write.
+    match /leaderboards/{leaderboardId} {
+      allow read:  if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // --- /audit_logs/{logId} ---
+    // Immutable audit trail. Only super-admin can read or create.
+    match /audit_logs/{logId} {
+      allow read:   if isSuperAdmin();
+      allow create: if isSuperAdmin();
+      allow update, delete: if false;
+    }
+
+
+    // =====================================================================
+    // EVENTS AND NESTED SUBCOLLECTIONS
+    // =====================================================================
+
+    // --- /events/{eventId} ---
     match /events/{eventId} {
-      allow get: if isEventAdminOrSuperAdmin(eventId);
-      allow list: if isSuperAdmin();
+      allow get:    if isAdminOrAbove(eventId);
+      allow list:   if isSuperAdmin();
       allow create: if isSuperAdmin() && hasCorrectIdOnCreate(eventId);
-      allow update: if isEventAdminOrSuperAdmin(eventId) && areIdsImmutable();
+      allow update: if isAdminOrAbove(eventId) && areIdsImmutable();
       allow delete: if isSuperAdmin();
 
+      // --- /events/{eventId}/admins/{adminId} ---
+      // Admin assignments for an event. Only super-admin can manage.
       match /admins/{adminId} {
         allow read, write: if isSuperAdmin();
       }
-      
+
+      // --- /events/{eventId}/payment_requests/{requestId} ---
+      // Team-to-team payment requests.
+      // - Admins & super-admin: full read + update/delete (approve/reject)
+      // - Team users in this event: can read all requests, create their own
       match /payment_requests/{requestId} {
-        allow read, update, delete: if isEventAdminOrSuperAdmin(eventId);
-        allow create: if canCreatePaymentRequest(eventId);
+        allow read:           if isAdminOrAbove(eventId) || isTeamUserForEvent(eventId);
+        allow update, delete: if isAdminOrAbove(eventId);
+        allow create:         if isTeamUserForEvent(eventId)
+                              && request.resource.data.fromTeamId == getUserProfile().teamId;
       }
 
+      // --- /events/{eventId}/teams/{teamId} ---
       match /teams/{teamId} {
-        allow get: if isEventAdminOrSuperAdmin(eventId) || isTeamMember(eventId, teamId);
-        allow list: if isEventAdminOrSuperAdmin(eventId) || isTeamUserForEvent(eventId);
-        allow create, update, delete: if isEventAdminOrSuperAdmin(eventId);
+        allow get:  if isAdminOrAbove(eventId) || isTeamMember(eventId, teamId);
+        allow list: if isAdminOrAbove(eventId) || isTeamUserForEvent(eventId);
+        allow create, update, delete: if isAdminOrAbove(eventId);
 
+        // --- /events/{eventId}/teams/{teamId}/transactions/{transactionId} ---
+        // Transaction history for a team.
         match /transactions/{transactionId} {
-          allow read: if isEventAdminOrSuperAdmin(eventId) || isTeamMember(eventId, teamId);
-          allow write: if isEventAdminOrSuperAdmin(eventId);
+          allow read:  if isAdminOrAbove(eventId) || isTeamMember(eventId, teamId);
+          allow write: if isAdminOrAbove(eventId);
         }
 
+        // --- /events/{eventId}/teams/{teamId}/loans/{loanId} ---
+        // Loan records for a team.
         match /loans/{loanId} {
-          allow read: if isEventAdminOrSuperAdmin(eventId) || isTeamMember(eventId, teamId);
-          allow write: if isEventAdminOrSuperAdmin(eventId);
+          allow read:  if isAdminOrAbove(eventId) || isTeamMember(eventId, teamId);
+          allow write: if isAdminOrAbove(eventId);
         }
 
+        // --- /events/{eventId}/teams/{teamId}/notifications/{notificationId} ---
+        // Notifications for a team.
+        // - Team members can read their own and update (mark as read).
+        // - Admins can read and write (create notifications).
         match /notifications/{notificationId} {
-          allow read: if isEventAdminOrSuperAdmin(eventId) || isTeamMember(eventId, teamId);
-          allow write: if isEventAdminOrSuperAdmin(eventId);
+          allow read:   if isAdminOrAbove(eventId) || isTeamMember(eventId, teamId);
+          allow create: if isAdminOrAbove(eventId);
+          allow update: if isAdminOrAbove(eventId) || isTeamMember(eventId, teamId);
+          allow delete: if isAdminOrAbove(eventId);
         }
       }
     }
-    
-    // Global collections for game management
-    match /cohorts/{cohortId} {
-        allow get: if isSignedIn();
-        allow list: if isSuperAdmin();
-        allow write: if isSuperAdmin();
-    }
-    
-    match /properties/{propertyId} {
-        allow read: if isSignedIn();
-        allow write: if isEventAdminOrSuperAdmin(request.resource.data.eventId) || isSuperAdmin();
-    }
-    
-    match /tokens/{tokenId} {
-        allow read: if isSignedIn();
-        allow write: if isEventAdminOrSuperAdmin(request.resource.data.eventId) || isSuperAdmin();
-    }
-    
-    match /auctions/{auctionId} {
-        allow read: if isSignedIn();
-        allow write: if isEventAdminOrSuperAdmin(request.resource.data.eventId) || isSuperAdmin();
-    }
 
-    match /leaderboards/{leaderboardId} {
-        allow read: if isSignedIn();
-        allow write: if isSuperAdmin(); // Should be written by cloud function
-    }
 
-    match /audit_logs/{logId} {
-        allow read: if isSuperAdmin();
-        allow create: if isSuperAdmin(); // Should be written by cloud function or admin actions
-        allow update, delete: if false;
-    }
-    
-    // Collection Group Rules
+    // =====================================================================
+    // COLLECTION GROUP RULES
+    // These allow the super-admin dashboard to query subcollections
+    // across all events using collectionGroup().
+    // =====================================================================
+
     match /{path=**}/teams/{teamId} {
       allow get, list: if isSuperAdmin();
     }
@@ -158,6 +216,9 @@ service cloud.firestore {
       allow get, list: if isSuperAdmin();
     }
     match /{path=**}/loans/{loanId} {
+      allow get, list: if isSuperAdmin();
+    }
+    match /{path=**}/payment_requests/{requestId} {
       allow get, list: if isSuperAdmin();
     }
   }

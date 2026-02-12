@@ -1,9 +1,9 @@
 'use client';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import React, { useEffect, useState, useRef } from 'react';
-import { QrScanner } from '@yudiel/react-qr-scanner';
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 type QrScannerDialogProps = {
   onScan: (data: string | null) => void;
@@ -81,11 +81,10 @@ export function QrScannerDialog({ onScan, children }: QrScannerDialogProps) {
       if (hasCameraPermission) {
           return (
              <div className="overflow-hidden rounded-md">
-                 <QrScanner
-                    onDecode={handleDecode}
+                 <Scanner
+                    onScan={(result) => result?.[0]?.rawValue && handleDecode(result[0].rawValue)}
                     onError={handleError}
-                    containerStyle={{ width: '100%', paddingTop: '100%' }}
-                    videoStyle={{ objectFit: 'cover' }}
+                    styles={{ container: { width: '100%', paddingTop: '100%' }, video: { objectFit: 'cover' } }}
                 />
              </div>
           )
@@ -102,9 +101,7 @@ export function QrScannerDialog({ onScan, children }: QrScannerDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Scan QR Code</DialogTitle>
@@ -117,16 +114,3 @@ export function QrScannerDialog({ onScan, children }: QrScannerDialogProps) {
     </Dialog>
   );
 }
-
-// DialogTrigger needs to be a direct child of Dialog for it to work with asChild
-const DialogTrigger = React.forwardRef<
-  HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement>
->(({ children, ...props }, ref) => {
-  return (
-    <button ref={ref} {...props}>
-      {children}
-    </button>
-  );
-});
-DialogTrigger.displayName = 'DialogTrigger';

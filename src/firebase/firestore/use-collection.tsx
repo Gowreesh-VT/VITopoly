@@ -119,17 +119,29 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        const contextualError = new FirestorePermissionError({
-          operation: 'list',
-          path,
-        });
+        // Log the REAL error before wrapping it
+        console.error(`[useCollection] Firestore error on path "${path}":`, err.code, err.message);
 
-        setError(contextualError);
-        setData(null);
-        setIsLoading(false);
+        if (err.code === 'permission-denied') {
+          const contextualError = new FirestorePermissionError({
+            operation: 'list',
+            path,
+          });
 
-        // Trigger global error propagation
-        errorEmitter.emit('permission-error', contextualError);
+          setError(contextualError);
+          setData(null);
+          setIsLoading(false);
+
+          // Trigger global error propagation
+          errorEmitter.emit('permission-error', contextualError);
+        } else {
+          // For non-permission errors (missing index, network, etc.),
+          // don't wrap as permission error
+          setError(err);
+          setData(null);
+          setIsLoading(false);
+          console.error(`[useCollection] Non-permission error:`, err);
+        }
       },
     );
 

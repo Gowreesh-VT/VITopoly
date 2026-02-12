@@ -138,8 +138,8 @@ export default function AdminDashboardPage() {
     const cohortTeamIds = moderatedCohort ? new Set(teamsForDisplay.map(t => t.id)) : null;
 
     return transactions.filter(tx => {
-      const typeMatch = logFilterType ? tx.type === logFilterType : true;
-      const teamMatch = logFilterTeam ? tx.fromTeamId === logFilterTeam || tx.toTeamId === logFilterTeam : true;
+      const typeMatch = logFilterType && logFilterType !== 'all' ? tx.type === logFilterType : true;
+      const teamMatch = logFilterTeam && logFilterTeam !== 'all' ? tx.fromTeamId === logFilterTeam || tx.toTeamId === logFilterTeam : true;
       const dateMatch = logFilterDate?.from && logFilterDate?.to 
         ? isWithinInterval(new Date(tx.timestamp), { start: logFilterDate.from, end: logFilterDate.to }) 
         : true;
@@ -204,7 +204,7 @@ export default function AdminDashboardPage() {
 
   const isLoading = isUserProfileLoading || arePaymentRequestsLoading || areTeamsLoading || areLoansLoading || areTransactionsLoading || areModeratorCohortsLoading || isCohortLeaderboardLoading;
 
-  if (isLoading || !isClient) {
+  if (isLoading || !isClient || !user) {
     return <DashboardSkeleton isModerator={!!moderatedCohort} />;
   }
   
@@ -377,7 +377,7 @@ export default function AdminDashboardPage() {
                       <SelectValue placeholder="Filter by type..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Types</SelectItem>
+                      <SelectItem value="all">All Types</SelectItem>
                       {TRANSACTION_TYPES.map(type => (
                         <SelectItem key={type} value={type} className="capitalize">
                           {type.replace(/_/g, ' ').toLowerCase()}
@@ -390,7 +390,7 @@ export default function AdminDashboardPage() {
                       <SelectValue placeholder="Filter by team..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Teams</SelectItem>
+                      <SelectItem value="all">All Teams</SelectItem>
                       {teamsForDisplay?.map(team => (
                         <SelectItem key={team.id} value={team.id}>
                           {team.name}

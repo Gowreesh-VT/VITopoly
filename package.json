@@ -1,5 +1,5 @@
 {
-  "name": "nextn",
+  "name": "vitopoly",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -40,7 +40,7 @@
     "embla-carousel-react": "^8.6.0",
     "firebase": "^11.9.1",
     "lucide-react": "^0.475.0",
-    "next": "15.5.9",
+    "next": "^16.2.0-canary.37",
     "patch-package": "^8.0.0",
     "qrcode": "^1.5.3",
     "react": "^19.2.1",
