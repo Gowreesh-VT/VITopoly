@@ -88,8 +88,11 @@ export function useCollection<T = any>(
     // Guard 2: Reject queries that resolve to the database root.
     // This happens when a path segment (e.g. eventId) is undefined, causing
     // the constructed reference to collapse to "/".
+    // NOTE: collectionGroup() queries have an empty canonical path by design,
+    // so we only apply this guard to CollectionReference instances.
     const path = extractPath(memoizedTargetRefOrQuery);
-    if (!path || path === '/' || path === '') {
+    const isCollectionRef = memoizedTargetRefOrQuery.type === 'collection';
+    if (isCollectionRef && (!path || path === '/' || path === '')) {
       if (process.env.NODE_ENV !== 'production') {
         console.warn(
           '[useCollection] Called with a root-level path ("' +
