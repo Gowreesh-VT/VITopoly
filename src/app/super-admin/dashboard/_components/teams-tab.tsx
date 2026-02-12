@@ -21,6 +21,7 @@ import { updateDocumentNonBlocking } from '@/firebase';
 import { AdjustBalanceDialog } from '@/components/dashboard/adjust-balance-dialog';
 import { CreditScoreOverrideDialog } from '@/components/dashboard/credit-score-override-dialog';
 import { CreateTeamDialog } from '@/components/dashboard/create-team-dialog';
+import { CreateTeamUserDialog } from '@/components/dashboard/create-team-user-dialog';
 import { ForceCloseLoanDialog } from '@/components/dashboard/force-close-loan-dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { Team, Event, Loan } from '@/lib/types';
@@ -95,6 +96,9 @@ export function TeamsTab({ firestore, userId, teams, events, loans }: TeamsTabPr
                     <CreditScoreOverrideDialog team={team}>
                       <Button variant="outline" size="sm">Override Score</Button>
                     </CreditScoreOverrideDialog>
+                    <CreateTeamUserDialog team={team}>
+                      <Button variant="outline" size="sm">Create Login</Button>
+                    </CreateTeamUserDialog>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" size="sm" className="w-24">
