@@ -25,7 +25,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, creditTeam, debitTeam, repayLoan, adjustTeamCreditScore } from '@/firebase';
+import { useFirestore } from '@/firebase';
+import { creditTeam, debitTeam, repayLoan, adjustTeamCreditScore } from '@/firebase/transactions';
 import type { Team, Loan } from '@/lib/types';
 import { Textarea } from '../ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,7 +34,7 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Coins, Landmark, Trophy } from 'lucide-react';
 
 const formSchema = z.object({
-  amount: z.coerce.number().positive("Amount must be a positive number."),
+  amount: z.coerce.number().refine((val) => val !== 0, "Amount must not be zero."),
   reason: z.string().min(5, "A reason of at least 5 characters is required."),
 });
 
