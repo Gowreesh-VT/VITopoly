@@ -85,13 +85,13 @@ export async function approvePaymentRequest(
     transaction.set(fromTeamNotificationRef, {
         id: fromTeamNotificationRef.id, eventId: req.eventId, teamId: req.fromTeamId,
         title: 'Payment Approved',
-        message: `Your payment of ₹${req.amount.toLocaleString()} to ${req.toTeamName} was approved.`,
+        message: `Your payment of $${req.amount.toLocaleString()} to ${req.toTeamName} was approved.`,
         read: false, timestamp, type: 'payment-approved',
     });
     transaction.set(toTeamNotificationRef, {
         id: toTeamNotificationRef.id, eventId: req.eventId, teamId: req.toTeamId,
         title: 'Payment Received',
-        message: `You received a payment of ₹${req.amount.toLocaleString()} from ${req.fromTeamName}.`,
+        message: `You received a payment of $${req.amount.toLocaleString()} from ${req.fromTeamName}.`,
         read: false, timestamp, type: 'payment-received',
     });
 
@@ -123,7 +123,7 @@ export async function rejectPaymentRequest(
     eventId: req.eventId,
     teamId: req.fromTeamId,
     title: 'Payment Rejected',
-    message: `Your request to pay ${req.toTeamName} ₹${req.amount.toLocaleString()} was rejected.`,
+    message: `Your request to pay ${req.toTeamName} $${req.amount.toLocaleString()} was rejected.`,
     read: false,
     timestamp: new Date().toISOString(),
     type: 'payment-rejected'
@@ -181,7 +181,7 @@ export async function issueLoan(
             throw new Error(`${teamData.name} already has an active loan.`);
         }
         if (amount > eventData.loanLimit) {
-            throw new Error(`Loan amount exceeds the event limit of ₹${eventData.loanLimit.toLocaleString()}.`);
+            throw new Error(`Loan amount exceeds the event limit of $${eventData.loanLimit.toLocaleString()}.`);
         }
 
         const newBalance = teamData.balance + amount;
@@ -212,7 +212,7 @@ export async function issueLoan(
         const newNotification: Notification = {
             id: notificationRef.id, eventId, teamId,
             title: 'Loan Issued',
-            message: `A loan of ₹${amount.toLocaleString()} has been issued to your team.`,
+            message: `A loan of $${amount.toLocaleString()} has been issued to your team.`,
             read: false, timestamp, type: 'loan-issued',
         };
         transaction.set(notificationRef, newNotification);
@@ -255,7 +255,7 @@ export async function creditTeam(firestore: Firestore, payload: CreditDebitPaylo
         const newNotification: Notification = {
             id: notificationRef.id, eventId, teamId,
             title: `You've Received a Reward!`,
-            message: `Your account has been credited with ₹${amount.toLocaleString()}. Reason: ${reason}.`,
+            message: `Your account has been credited with $${amount.toLocaleString()}. Reason: ${reason}.`,
             read: false, timestamp, type: 'reward-received',
         };
         transaction.set(notificationRef, newNotification);
@@ -292,7 +292,7 @@ export async function debitTeam(firestore: Firestore, payload: CreditDebitPayloa
         const newNotification: Notification = {
             id: notificationRef.id, eventId, teamId,
             title: 'Penalty Incurred',
-            message: `Your account has been debited by ₹${amount.toLocaleString()}. Reason: ${reason}.`,
+            message: `Your account has been debited by $${amount.toLocaleString()}. Reason: ${reason}.`,
             read: false, timestamp, type: 'penalty-incurred',
         };
         transaction.set(notificationRef, newNotification);
@@ -349,7 +349,7 @@ export async function repayLoan(firestore: Firestore, payload: RepayLoanPayload)
         const newNotification: Notification = {
             id: notificationRef.id, eventId, teamId,
             title: 'Loan Repaid',
-            message: `Your loan of ₹${amount.toLocaleString()} has been successfully repaid.`,
+            message: `Your loan of $${amount.toLocaleString()} has been successfully repaid.`,
             read: false, timestamp, type: 'loan-repaid',
         };
         transaction.set(notificationRef, newNotification);
@@ -599,4 +599,59 @@ export async function removeTeamFromCohort(firestore: Firestore, { cohortId, tea
     batch.update(cohortRef, { teamIds: arrayRemove(teamId) });
     batch.update(teamRef, { cohortId: null });
     await batch.commit();
+}
+
+export async function adjustTeamCreditScore(firestore: Firestore, payload: {
+    eventId: string;
+    teamId: string;
+    adminId: string;
+    amount: number;
+    reason: string;
+}): Promise<void> {
+    const { eventId, teamId, adminId, amount, reason } = payload;
+    const teamRef = doc(firestore, 'events', eventId, 'teams', teamId);
+    const transactionRef = doc(collection(firestore, 'events', eventId, 'teams', teamId, 'transactions'));
+    const notificationRef = doc(collection(firestore, 'events', eventId, 'teams', teamId, 'notifications'));
+
+    await runTransaction(firestore, async (transaction) => {
+        const teamDoc = await transaction.get(teamRef);
+        if (!teamDoc.exists()) throw new Error("Team not found.");
+        
+        const teamData = teamDoc.data() as Team;
+        // Apply the change
+        const newCreditScore = (teamData.creditScore || 0) + amount;
+        
+        const timestamp = new Date().toISOString();
+
+        transaction.update(teamRef, { creditScore: newCreditScore });
+
+        const newTransaction: Transaction = {
+            id: transactionRef.id,
+            eventId,
+            timestamp,
+            adminId,
+            amount, // Storing the score change amount here
+            reason,
+            fromTeamId: null,
+            fromTeamName: 'Super Admin',
+            toTeamId: teamId,
+            toTeamName: teamData.name,
+            type: 'CREDIT_SCORE_ADJUSTMENT',
+            balanceAfterTransaction: teamData.balance, // Balance doesn't change
+        };
+        transaction.set(transactionRef, newTransaction);
+        
+        const changeType = amount >= 0 ? 'increased' : 'decreased';
+        const newNotification: Notification = {
+            id: notificationRef.id,
+            eventId,
+            teamId,
+            title: 'Credit Score Updated',
+            message: `Your credit score has been ${changeType} by ${Math.abs(amount)}. Reason: ${reason}.`,
+            read: false,
+            timestamp,
+            type: 'credit-score-updated',
+        };
+        transaction.set(notificationRef, newNotification);
+    });
 }

@@ -44,6 +44,12 @@ export function TeamsTab({ firestore, userId, teams, events, loans }: TeamsTabPr
     toast({ title: 'Team Status Updated', description: `${team.name} has been ${newStatus.toLowerCase()}.` });
   };
 
+  console.log("TeamsTab Debug:", {
+      teamsCount: teams.length,
+      firstTeamEventId: teams[0]?.eventId,
+      firstEventId: events[0]?.id
+  });
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -77,14 +83,14 @@ export function TeamsTab({ firestore, userId, teams, events, loans }: TeamsTabPr
                 <TableRow key={team.id}>
                   <TableCell className="font-medium">{team.name}</TableCell>
                   <TableCell>{events.find((e) => e.id === team.eventId)?.name ?? 'N/A'}</TableCell>
-                  <TableCell>₹{team.balance.toLocaleString()}</TableCell>
+                  <TableCell>${team.balance.toLocaleString()}</TableCell>
                   <TableCell>{team.creditScore}</TableCell>
                   <TableCell>
                     <Badge variant={team.status === 'ACTIVE' ? 'default' : 'destructive'}>{team.status}</Badge>
                   </TableCell>
                   <TableCell>
                     {loan ? (
-                      <Badge variant="destructive">{`₹${loan.amount.toLocaleString()}`}</Badge>
+                      <Badge variant="destructive">{`$${loan.amount.toLocaleString()}`}</Badge>
                     ) : (
                       <Badge variant="secondary">None</Badge>
                     )}

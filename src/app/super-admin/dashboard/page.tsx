@@ -124,7 +124,7 @@ export default function SuperAdminDashboardPage() {
         </TabsContent>
 
         <TabsContent value="leaderboard">
-          <LeaderboardTab leaderboards={leaderboards} />
+          <LeaderboardTab leaderboards={leaderboards} cohorts={cohorts} teams={teams} />
         </TabsContent>
 
         <TabsContent value="ledger">

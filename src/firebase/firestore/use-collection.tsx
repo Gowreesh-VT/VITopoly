@@ -79,6 +79,7 @@ export function useCollection<T = any>(
   useEffect(() => {
     // Guard 1: No ref/query provided — reset and wait.
     if (!memoizedTargetRefOrQuery) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setData(null);
       setIsLoading(false);
       setError(null);

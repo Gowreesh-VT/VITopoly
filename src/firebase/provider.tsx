@@ -69,8 +69,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
-    isUserLoading: true,
-    userError: null,
+    isUserLoading: !!auth,
+    userError: auth ? null : new Error("Auth service not provided"),
   });
 
   // Global subscription to game config — only subscribe once the user is authenticated,
@@ -82,12 +82,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   const { data: gameConfig, isLoading: isGameConfigLoading } = useDoc<GameConfig>(gameConfigRef);
 
   useEffect(() => {
-    if (!auth) { 
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
-      return;
-    }
+    if (!auth) return;
 
-    setUserAuthState({ user: null, isUserLoading: true, userError: null });
+
 
     const unsubscribe = onAuthStateChanged(
       auth,
@@ -165,6 +162,7 @@ export const useFirebaseApp = (): FirebaseApp => {
 type MemoFirebase <T> = T & {__memo?: boolean};
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const memoized = useMemo(factory, deps);
   
   if(typeof memoized !== 'object' || memoized === null) return memoized;

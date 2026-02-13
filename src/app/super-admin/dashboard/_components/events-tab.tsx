@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { CreateEventDialog } from '@/components/dashboard/create-event-dialog';
 import type { Event } from '@/lib/types';
+import { formatCurrency } from '@/lib/utils';
 
 interface EventsTabProps {
   events: Event[];
@@ -43,8 +44,8 @@ export function EventsTab({ events }: EventsTabProps) {
                 <TableCell className="font-medium">{event.name}</TableCell>
                 <TableCell>{format(new Date(event.startDate), 'PPP')}</TableCell>
                 <TableCell>{format(new Date(event.endDate), 'PPP')}</TableCell>
-                <TableCell>₹{event.initialTeamBalance.toLocaleString()}</TableCell>
-                <TableCell>₹{event.loanLimit.toLocaleString()}</TableCell>
+                <TableCell>{formatCurrency(event.initialTeamBalance)}</TableCell>
+                <TableCell>{formatCurrency(event.loanLimit)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

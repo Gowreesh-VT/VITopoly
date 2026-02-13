@@ -92,40 +92,50 @@ service cloud.firestore {
     // Cohort groupings for teams.
     // Any signed-in user can read; only super-admin can write.
     match /cohorts/{cohortId} {
-      allow read:  if isSignedIn();
-      allow write: if isSuperAdmin();
+      allow read:   if isSignedIn();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // --- /properties/{propertyId} ---
     // Game properties that can be owned by teams.
     // Any signed-in user can read; admins and super-admin can write.
     match /properties/{propertyId} {
-      allow read:  if isSignedIn();
-      allow write: if isSuperAdmin();
+      allow read:   if isSignedIn();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin(); // Moderators might need update? No, they use Cloud Functions or specific endpoints usually. But here we do client-side.
+      allow delete: if isSuperAdmin();
     }
 
     // --- /tokens/{tokenId} ---
     // Game tokens assigned to teams.
     // Any signed-in user can read; admins and super-admin can write.
     match /tokens/{tokenId} {
-      allow read:  if isSignedIn();
-      allow write: if isSuperAdmin();
+      allow read:   if isSignedIn();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // --- /auctions/{auctionId} ---
     // Game auction events.
     // Any signed-in user can read; admins and super-admin can write.
     match /auctions/{auctionId} {
-      allow read:  if isSignedIn();
-      allow write: if isSuperAdmin();
+      allow read:   if isSignedIn();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // --- /leaderboards/{leaderboardId} ---
     // Leaderboard data, typically written by cloud functions.
     // Any signed-in user can read; only super-admin can write.
     match /leaderboards/{leaderboardId} {
-      allow read:  if isSignedIn();
-      allow write: if isSuperAdmin();
+      allow read:   if isSignedIn();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // --- /audit_logs/{logId} ---
@@ -169,8 +179,8 @@ service cloud.firestore {
       // --- /events/{eventId}/teams/{teamId} ---
       match /teams/{teamId} {
         allow get:  if isAdminOrAbove(eventId) || isTeamMember(eventId, teamId);
-        allow list: if isAdminOrAbove(eventId) || isTeamUserForEvent(eventId);
-        allow create, update, delete: if isAdminOrAbove(eventId);
+        allow list: if isSuperAdmin() || isAdminOrAbove(eventId) || isTeamUserForEvent(eventId);
+        allow create, update, delete: if isSuperAdmin() || isAdminOrAbove(eventId);
 
         // --- /events/{eventId}/teams/{teamId}/transactions/{transactionId} ---
         // Transaction history for a team.

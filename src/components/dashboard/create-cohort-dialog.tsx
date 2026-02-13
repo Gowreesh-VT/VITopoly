@@ -73,7 +73,7 @@ export function CreateCohortDialog({ children, events, admins }: CreateCohortDia
         eventId: values.eventId,
         moderatorId: values.moderatorId,
         teamIds: [],
-        status: 'ACTIVE',
+        status: 'WAITING',
     }
     
     setDocumentNonBlocking(newCohortRef, newCohort, {});

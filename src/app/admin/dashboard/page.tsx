@@ -36,6 +36,7 @@ import { TRANSACTION_TYPES } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { IssueLoanDialog } from '@/components/dashboard/issue-loan-dialog';
+import { ModeratorGameConsole } from '@/components/dashboard/moderator-game-console';
 import { AdminTransactionDialog } from '@/components/dashboard/admin-transaction-dialog';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
@@ -58,7 +59,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     setIsClient(true);
     const hash = window.location.hash.replace('#', '');
-    const validTabs = ['requests', 'teams', 'log', 'cohort-leaderboard'];
+    const validTabs = ['requests', 'teams', 'log', 'cohort-leaderboard', 'live-game'];
     if (validTabs.includes(hash)) {
       setActiveTab(hash);
     }
@@ -252,9 +253,10 @@ export default function AdminDashboardPage() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="requests" className="w-full">
-        <TabsList className={`grid w-full ${moderatedCohort ? 'grid-cols-4' : 'grid-cols-3'}`}>
+        <TabsList className={`grid w-full ${moderatedCohort ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="requests">Pending Requests</TabsTrigger>
           <TabsTrigger value="teams">Team Balances</TabsTrigger>
+          <TabsTrigger value="live-game">Live Game</TabsTrigger>
           {moderatedCohort && <TabsTrigger value="cohort-leaderboard">Cohort Leaderboard</TabsTrigger>}
           <TabsTrigger value="log">Transaction Log</TabsTrigger>
         </TabsList>
@@ -286,7 +288,7 @@ export default function AdminDashboardPage() {
                         </div>
                         <div className="text-sm text-muted-foreground">{req.reason}</div>
                       </TableCell>
-                      <TableCell>₹{req.amount.toLocaleString()}</TableCell>
+                      <TableCell>${req.amount.toLocaleString()}</TableCell>
                       <TableCell>{formatDistanceToNow(new Date(req.timestamp), { addSuffix: true })}</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button variant="ghost" size="icon" onClick={() => handleApprove(req)}><Check className="h-4 w-4 text-green-600" /></Button>
@@ -298,6 +300,9 @@ export default function AdminDashboardPage() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="live-game">
+            <ModeratorGameConsole />
         </TabsContent>
         <TabsContent value="teams">
           <Card>
@@ -321,7 +326,7 @@ export default function AdminDashboardPage() {
                     return (
                       <TableRow key={team.id}>
                         <TableCell className="font-medium">{team.name}</TableCell>
-                        <TableCell>₹{team.balance.toLocaleString()}</TableCell>
+                        <TableCell>${team.balance.toLocaleString()}</TableCell>
                         <TableCell>{team.creditScore}</TableCell>
                         <TableCell>
                           {team.hasActiveLoan ? (
@@ -426,7 +431,7 @@ export default function AdminDashboardPage() {
                       </TableCell>
                       <TableCell>{format(new Date(tx.timestamp), 'PPpp')}</TableCell>
                       <TableCell className="text-right font-medium">
-                        ₹{tx.amount.toLocaleString()}
+                        ${tx.amount.toLocaleString()}
                       </TableCell>
                     </TableRow>
                   ))}

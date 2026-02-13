@@ -25,6 +25,7 @@ import type { Team, Transaction, Loan, PaymentRequest, Event, Property, Token, L
 import { Skeleton } from '@/components/ui/skeleton';
 import { InitiatePaymentDialog } from '@/components/dashboard/initiate-payment-dialog';
 import { useMemo, useState, useEffect } from 'react';
+import { formatCurrency } from '@/lib/utils';
 
 export default function TeamDashboardPage() {
   const { user } = useUser();
@@ -140,11 +141,11 @@ export default function TeamDashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Current Balance" value={`₹${team.balance.toLocaleString()}`} icon={<Wallet />} />
+        <StatCard title="Current Balance" value={formatCurrency(team.balance)} icon={<Wallet />} />
         <StatCard title="Credit Score" value={team.creditScore} icon={<TrendingUp />} />
         <StatCard title="Overall Rank" value={teamOverallRank ? `#${teamOverallRank.rank}` : 'N/A'} icon={<Trophy />} description={teamOverallRank ? `${teamOverallRank.score.toFixed(2)} pts` : 'Not ranked'} />
         <StatCard title="Cohort Rank" value={teamCohortRank ? `#${teamCohortRank.rank}`: 'N/A'} icon={<Star />} description={teamCohortRank ? `${teamCohortRank.score.toFixed(2)} pts` : 'Not ranked'} />
-        <StatCard id="loan-status" title="Loan Status" value={activeLoan ? `₹${activeLoan.amount.toLocaleString()}` : 'None'} icon={<HandCoins />} description={activeLoan ? 'Active loan' : 'No active loans'} />
+        <StatCard id="loan-status" title="Loan Status" value={activeLoan ? formatCurrency(activeLoan.amount) : 'None'} icon={<HandCoins />} description={activeLoan ? 'Active loan' : 'No active loans'} />
         <StatCard title="Account Status" value={team.status} icon={<Activity />} />
         <StatCard title="Current Event" value={event?.name ?? 'Loading...'} icon={<Calendar />} />
       </div>
@@ -193,7 +194,7 @@ export default function TeamDashboardPage() {
                     <TableBody>
                         {properties?.length === 0 && <TableRow><TableCell colSpan={3} className="text-center">No properties owned.</TableCell></TableRow>}
                         {properties?.map(prop => (
-                            <TableRow key={prop.id}><TableCell className="font-medium">{prop.name}</TableCell><TableCell>₹{prop.baseValue.toLocaleString()}</TableCell><TableCell>₹{prop.rentValue.toLocaleString()}</TableCell></TableRow>
+                            <TableRow key={prop.id}><TableCell className="font-medium">{prop.name}</TableCell><TableCell>{formatCurrency(prop.baseValue)}</TableCell><TableCell>{formatCurrency(prop.rentValue)}</TableCell></TableRow>
                         ))}
                     </TableBody>
                 </Table>
@@ -216,7 +217,7 @@ export default function TeamDashboardPage() {
                                     </div>
                                     <div className="text-sm text-muted-foreground">{req.reason}</div>
                                 </TableCell>
-                                <TableCell>₹{req.amount.toLocaleString()}</TableCell>
+                                <TableCell>{formatCurrency(req.amount)}</TableCell>
                                 <TableCell><Badge variant={getStatusVariant(req.status)}>{req.status}</Badge></TableCell>
                                 <TableCell>{isClient ? formatDistanceToNow(new Date(req.timestamp), { addSuffix: true }) : <Skeleton className="h-4 w-20" />}</TableCell>
                             </TableRow>
@@ -267,10 +268,10 @@ export default function TeamDashboardPage() {
                   </TableCell>
                   <TableCell>{isClient ? format(new Date(tx.timestamp), 'PPpp') : <Skeleton className="h-4 w-32" />}</TableCell>
                   <TableCell className={`text-right font-medium ${isDebit ? 'text-destructive' : 'text-green-600'}`}>
-                    {isDebit ? '-' : '+'}₹{tx.amount.toLocaleString()}
+                    {isDebit ? '-' : '+'}{formatCurrency(tx.amount)}
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
-                    {tx.balanceAfterTransaction?.toLocaleString ? `₹${tx.balanceAfterTransaction.toLocaleString()}`: '-'}
+                    {tx.balanceAfterTransaction?.toLocaleString ? formatCurrency(tx.balanceAfterTransaction): '-'}
                   </TableCell>
                 </TableRow>
               )})}

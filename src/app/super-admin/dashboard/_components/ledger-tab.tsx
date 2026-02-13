@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { Transaction } from '@/lib/types';
+import { formatCurrency } from '@/lib/utils';
 
 interface LedgerTabProps {
   ledger: Transaction[];
@@ -43,7 +44,7 @@ export function LedgerTab({ ledger }: LedgerTabProps) {
                   </div>
                 </TableCell>
                 <TableCell>{format(new Date(tx.timestamp), 'yyyy-MM-dd HH:mm:ss')}</TableCell>
-                <TableCell className="text-right font-medium">₹{tx.amount.toLocaleString()}</TableCell>
+                <TableCell className="text-right font-medium">{formatCurrency(tx.amount)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

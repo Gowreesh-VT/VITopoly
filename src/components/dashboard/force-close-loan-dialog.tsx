@@ -64,7 +64,7 @@ export function ForceCloseLoanDialog({ team, loan, adminId, children }: ForceClo
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action will administratively mark the active loan of <span className="font-semibold">₹{loan.amount.toLocaleString()}</span> for team <span className="font-semibold">{team.name}</span> as REPAID. This does not affect their balance and is for record-keeping and emergency overrides only. This cannot be undone.
+            This action will administratively mark the active loan of <span className="font-semibold">${loan.amount.toLocaleString()}</span> for team <span className="font-semibold">{team.name}</span> as REPAID. This does not affect their balance and is for record-keeping and emergency overrides only. This cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

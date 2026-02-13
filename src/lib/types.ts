@@ -42,7 +42,8 @@ export type TransactionType =
   | 'LOAN_REPAID'
   | 'SUPER_ADMIN_OVERRIDE'
   | 'PROPERTY_PURCHASE'
-  | 'TOKEN_ACTION';
+  | 'TOKEN_ACTION'
+  | 'CREDIT_SCORE_ADJUSTMENT';
 
 export const TRANSACTION_TYPES: TransactionType[] = [
   'SYSTEM_CREDIT',
@@ -55,6 +56,7 @@ export const TRANSACTION_TYPES: TransactionType[] = [
   'SUPER_ADMIN_OVERRIDE',
   'PROPERTY_PURCHASE',
   'TOKEN_ACTION',
+  'CREDIT_SCORE_ADJUSTMENT',
 ];
 
 export type Transaction = {
@@ -126,86 +128,101 @@ export type Event = {
 export type RoundStatus = "REGISTRATION" | "ROUND_1_ACTIVE" | "ROUND_1_LOCKED" | "ROUND_2_ACTIVE" | "AUCTION_PHASE" | "ROUND_3_ACTIVE" | "FINALIZED";
 
 export const ALL_ROUND_STATUSES: RoundStatus[] = [
-    "REGISTRATION",
-    "ROUND_1_ACTIVE",
-    "ROUND_1_LOCKED",
-    "ROUND_2_ACTIVE",
-    "AUCTION_PHASE",
-    "ROUND_3_ACTIVE",
-    "FINALIZED"
+  "REGISTRATION",
+  "ROUND_1_ACTIVE",
+  "ROUND_1_LOCKED",
+  "ROUND_2_ACTIVE",
+  "AUCTION_PHASE",
+  "ROUND_3_ACTIVE",
+  "FINALIZED"
 ];
 
 export type GameConfig = {
-    id: string;
-    currentRound: number;
-    roundStatus: RoundStatus;
-    roundStartTime: string;
-    roundEndTime: string;
-    cashWeight: number;
-    propertyWeight: number;
-    tokenWeight: number;
-    creditWeight: number;
+  id: string;
+  currentRound: number;
+  roundStatus: RoundStatus;
+  roundStartTime: string;
+  roundEndTime: string;
+  cashWeight: number;
+  propertyWeight: number;
+  tokenWeight: number;
+  creditWeight: number;
 }
 
+export type CohortStatus = 'WAITING' | 'ROUND_2_ACTIVE' | 'ROUND_2_COMPLETED' | 'ROUND_3_AUCTION' | 'FINALIZED';
+
 export type Cohort = {
-    id: string;
-    eventId: string;
-    name: string;
-    teamIds: string[];
-    moderatorId: string;
-    status: 'ACTIVE' | 'COMPLETED';
+  id: string;
+  eventId: string;
+  name: string;
+  teamIds: string[];
+  moderatorId: string;
+  status: CohortStatus;
 }
 
 export type Property = {
-    id: string;
-    eventId: string;
-    name: string;
-    cohortId: string;
-    baseValue: number;
-    rentValue: number;
-    ownerTeamId?: string | null;
-    ownerTeamName?: string | null;
-    status: 'UNOWNED' | 'OWNED' | 'SEIZED' | 'AUCTION';
+  id: string;
+  eventId: string;
+  name: string;
+  cohortId: string;
+  baseValue: number;
+  rentValue: number;
+  ownerTeamId?: string | null;
+  ownerTeamName?: string | null;
+  status: 'UNOWNED' | 'OWNED' | 'SEIZED' | 'AUCTION';
 }
 
 export type Token = {
-    id: string;
-    eventId: string;
-    teamId: string;
-    strategyTokens: number;
-    defenseTokens: number;
-    usedTokensHistory: any[];
+  id: string;
+  teamId: string;
+  strategyTokens: number;
+  defenseTokens: number;
+};
+
+export type AuctionTokenType = 'ACADEMIC_BOOST' | 'PRIME_SABOTAGE' | 'FINANCE_BOOST' | 'SHIELD';
+
+export type AuctionToken = {
+  id: string;
+  eventId: string;
+  cohortId: string;
+  name: string;
+  description: string;
+  type: AuctionTokenType;
+  originalPropertyId?: string; // If converted from seizure
+  winningTeamId?: string;
+  winningBid?: number;
+  isUsed: boolean;
 }
 
 export type Auction = {
-    id: string;
-    eventId: string;
-    propertyId: string;
-    cohortId: string;
-    status: 'OPEN' | 'CLOSED';
-    winningTeamId?: string;
-    winningBid?: number;
+  id: string;
+  eventId: string;
+  propertyId: string; // Deprecated in favor of Tokens? Or used for SEIZED properties before conversion?
+  cohortId: string;
+  status: 'OPEN' | 'CLOSED';
+  winningTeamId?: string;
+  winningBid?: number;
 }
 
 export type LeaderboardRanking = {
-    teamId: string;
-    teamName: string;
-    score: number;
-    rank: number;
+  teamId: string;
+  teamName: string;
+  score: number;
+  rank: number;
 }
 
 export type Leaderboard = {
-    id: string;
-    eventId: string;
-    cohortId?: string;
-    rankings: LeaderboardRanking[];
-    overallRankings?: LeaderboardRanking[];
+  id: string;
+  eventId: string;
+  cohortId?: string;
+  rankings: LeaderboardRanking[];
+  overallRankings?: LeaderboardRanking[];
 }
 
 export type AuditLog = {
-    id: string;
-    timestamp: string;
-    adminId: string;
-    action: string;
-    details: Record<string, any>;
+  id: string;
+  timestamp: string;
+  adminId: string;
+  action: string;
+  details: Record<string, any>;
 }

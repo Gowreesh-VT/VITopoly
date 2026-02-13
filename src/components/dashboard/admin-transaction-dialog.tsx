@@ -25,12 +25,12 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, creditTeam, debitTeam, repayLoan } from '@/firebase';
+import { useFirestore, creditTeam, debitTeam, repayLoan, adjustTeamCreditScore } from '@/firebase';
 import type { Team, Loan } from '@/lib/types';
 import { Textarea } from '../ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { Coins, Landmark } from 'lucide-react';
+import { Coins, Landmark, Trophy } from 'lucide-react';
 
 const formSchema = z.object({
   amount: z.coerce.number().positive("Amount must be a positive number."),
@@ -79,10 +79,14 @@ export function AdminTransactionDialog({ team, activeLoan, adminId, eventId, ope
 
       if (activeTab === 'credit') {
         actionPromise = creditTeam(firestore, payload);
-        successMessage = `Credited ${team.name} with ₹${values.amount.toLocaleString()}.`;
+        successMessage = `Credited ${team.name} with $${values.amount.toLocaleString()}.`;
       } else if (activeTab === 'debit') {
         actionPromise = debitTeam(firestore, payload);
-        successMessage = `Debited ${team.name} with ₹${values.amount.toLocaleString()}.`;
+        successMessage = `Debited ${team.name} with $${values.amount.toLocaleString()}.`;
+      } else if (activeTab === 'score') {
+        actionPromise = adjustTeamCreditScore(firestore, payload);
+        const change = values.amount > 0 ? 'Increased' : 'Decreased';
+        successMessage = `${change} credit score for ${team.name} by ${Math.abs(values.amount)}.`;
       } else {
         throw new Error("Invalid action tab.");
       }
@@ -113,7 +117,7 @@ export function AdminTransactionDialog({ team, activeLoan, adminId, eventId, ope
         });
         toast({
             title: "Loan Repaid",
-            description: `${team.name} has successfully repaid their loan of ₹${activeLoan.amount.toLocaleString()}.`,
+            description: `${team.name} has successfully repaid their loan of $${activeLoan.amount.toLocaleString()}.`,
         });
         handleClose();
     } catch (error: any) {
@@ -140,6 +144,7 @@ export function AdminTransactionDialog({ team, activeLoan, adminId, eventId, ope
             <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="credit">Credit</TabsTrigger>
                 <TabsTrigger value="debit">Debit</TabsTrigger>
+                <TabsTrigger value="score">Score</TabsTrigger>
                 <TabsTrigger value="loan" disabled={!team.hasActiveLoan}>Repay Loan</TabsTrigger>
             </TabsList>
             <TabsContent value="credit">
@@ -147,7 +152,7 @@ export function AdminTransactionDialog({ team, activeLoan, adminId, eventId, ope
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
                         <FormField control={form.control} name="amount" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Amount to Credit (₹)</FormLabel>
+                                <FormLabel>Amount to Credit ($)</FormLabel>
                                 <FormControl><Input type="number" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -173,7 +178,7 @@ export function AdminTransactionDialog({ team, activeLoan, adminId, eventId, ope
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
                         <FormField control={form.control} name="amount" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Amount to Debit (₹)</FormLabel>
+                                <FormLabel>Amount to Debit ($)</FormLabel>
                                 <FormControl><Input type="number" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -194,6 +199,42 @@ export function AdminTransactionDialog({ team, activeLoan, adminId, eventId, ope
                     </form>
                 </Form>
             </TabsContent>
+            <TabsContent value="score">
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                        <div className="flex items-center gap-2 p-3 bg-muted rounded-md mb-2">
+                             <Trophy className="h-5 w-5 text-amber-500" />
+                             <div>
+                                 <p className="text-sm font-medium">Current Score: {team.creditScore}</p>
+                                 <p className="text-xs text-muted-foreground">Adjusting score manually will notify the team.</p>
+                             </div>
+                        </div>
+                        <FormField control={form.control} name="amount" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Score Adjustment (+/-)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="e.g. 10 or -5" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                <p className="text-xs text-muted-foreground">Positive adds to score, Negative deducts.</p>
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="reason" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Reason</FormLabel>
+                                <FormControl><Textarea placeholder="e.g., Exceptional gameplay / Rule violation" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <DialogFooter>
+                             <Button type="button" variant="secondary" onClick={handleClose}>Cancel</Button>
+                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? 'Updating...' : 'Update Score'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </TabsContent>
             <TabsContent value="loan">
                 <div className="space-y-4 py-4">
                     {activeLoan ? (
@@ -203,11 +244,11 @@ export function AdminTransactionDialog({ team, activeLoan, adminId, eventId, ope
                             <AlertDescription>
                                 <div className="flex justify-between items-center">
                                     <span>Loan Amount:</span>
-                                    <span className="font-semibold">₹{activeLoan.amount.toLocaleString()}</span>
+                                    <span className="font-semibold">${activeLoan.amount.toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between items-center mt-1">
                                     <span>Team Balance:</span>
-                                    <span className="font-semibold">₹{team.balance.toLocaleString()}</span>
+                                    <span className="font-semibold">${team.balance.toLocaleString()}</span>
                                 </div>
                                 {team.balance < activeLoan.amount && (
                                      <p className="text-destructive text-xs mt-2">Team has insufficient funds to repay this loan.</p>

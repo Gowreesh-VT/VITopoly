@@ -44,7 +44,7 @@ import { format } from 'date-fns';
 
 const formSchema = z.object({
   currentRound: z.coerce.number().int().min(1),
-  roundStatus: z.enum(ALL_ROUND_STATUSES),
+  roundStatus: z.enum(ALL_ROUND_STATUSES as [string, ...string[]]),
   roundStartTime: z.date(),
   roundEndTime: z.date(),
   cashWeight: z.coerce.number().min(0).max(1),

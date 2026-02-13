@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { CreatePropertyDialog } from '@/components/dashboard/create-property-dialog';
 import { AssignPropertyOwnerDialog } from '@/components/dashboard/assign-property-owner-dialog';
 import type { Property, Event, Cohort, Team } from '@/lib/types';
+import { formatCurrency } from '@/lib/utils';
 
 interface PropertiesTabProps {
   properties: Property[];
@@ -50,8 +51,8 @@ export function PropertiesTab({ properties, events, cohorts, teams }: Properties
                 <TableCell className="font-medium">{prop.name}</TableCell>
                 <TableCell>{events.find((e) => e.id === prop.eventId)?.name}</TableCell>
                 <TableCell>{cohorts.find((c) => c.id === prop.cohortId)?.name}</TableCell>
-                <TableCell>₹{prop.baseValue.toLocaleString()}</TableCell>
-                <TableCell>₹{prop.rentValue.toLocaleString()}</TableCell>
+                <TableCell>{formatCurrency(prop.baseValue)}</TableCell>
+                <TableCell>{formatCurrency(prop.rentValue)}</TableCell>
                 <TableCell>{prop.ownerTeamName ?? '-'}</TableCell>
                 <TableCell>
                   <Badge variant={prop.status === 'OWNED' ? 'default' : 'secondary'}>{prop.status}</Badge>

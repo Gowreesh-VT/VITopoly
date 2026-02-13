@@ -200,7 +200,7 @@ export function CreateEventDialog({ children }: CreateEventDialogProps) {
               name="initialTeamBalance"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Initial Team Balance (₹)</FormLabel>
+                  <FormLabel>Initial Team Balance ($)</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} />
                   </FormControl>
@@ -213,7 +213,7 @@ export function CreateEventDialog({ children }: CreateEventDialogProps) {
               name="loanLimit"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Loan Limit (₹)</FormLabel>
+                  <FormLabel>Loan Limit ($)</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} />
                   </FormControl>

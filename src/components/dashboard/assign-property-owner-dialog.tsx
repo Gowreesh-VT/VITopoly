@@ -104,7 +104,7 @@ export function AssignPropertyOwnerDialog({ children, property, teams }: AssignP
                 <Landmark className="h-4 w-4" />
                 <AlertTitle>Property Value</AlertTitle>
                 <AlertDescription>
-                    Assigning a new owner will deduct the property's base value of <span className="font-semibold">₹{property.baseValue.toLocaleString()}</span> from their balance.
+                    Assigning a new owner will deduct the property's base value of <span className="font-semibold">${property.baseValue.toLocaleString()}</span> from their balance.
                 </AlertDescription>
             </Alert>
             <FormField
@@ -113,17 +113,20 @@ export function AssignPropertyOwnerDialog({ children, property, teams }: AssignP
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Owner</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value ?? ''}>
+                  <Select 
+                    onValueChange={(val) => field.onChange(val === 'UNOWNED' ? null : val)} 
+                    defaultValue={field.value ?? 'UNOWNED'}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select an owner" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">-- UNOWNED --</SelectItem>
+                      <SelectItem value="UNOWNED">-- UNOWNED --</SelectItem>
                       {teamsInCohort.map(team => (
                         <SelectItem key={team.id} value={team.id}>
-                          {team.name} (Balance: ₹{team.balance.toLocaleString()})
+                          {team.name} (Balance: ${team.balance.toLocaleString()})
                         </SelectItem>
                       ))}
                     </SelectContent>
