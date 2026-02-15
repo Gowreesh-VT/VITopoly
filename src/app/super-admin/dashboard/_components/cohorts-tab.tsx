@@ -54,10 +54,15 @@ export function CohortsTab({ cohorts, events, admins, teams, users }: CohortsTab
                 </TableCell>
                 <TableCell>{cohort.teamIds.length}</TableCell>
                 <TableCell>
-                  <Badge variant={cohort.status === 'ROUND_2_ACTIVE' ? 'default' : 'secondary'}>{cohort.status}</Badge>
+                  <Badge variant={cohort.status === 'ROUND_2_ACTIVE' ? 'default' : 'secondary'}>{cohort.status.replace(/_/g, ' ')}</Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <ManageCohortTeamsDialog cohort={cohort} allTeams={teams} admins={admins} users={users}>
+                  <ManageCohortTeamsDialog
+                    cohort={cohort}
+                    allTeams={teams}
+                    admins={admins}
+                    users={users}
+                  >
                     <Button size="sm">
                       <UserCog className="mr-2 h-4 w-4" />
                       Manage Teams

@@ -67,7 +67,7 @@ export default function SuperAdminDashboardPage() {
     exportLedgerCsv(ledger);
   };
 
-  if (isLoading || !isClient || !user) return <DashboardSkeleton />;
+  if (isLoading || !isClient) return <DashboardSkeleton />;
 
   return (
     <div className="flex flex-col gap-6">
@@ -124,13 +124,7 @@ export default function SuperAdminDashboardPage() {
         </TabsContent>
 
         <TabsContent value="leaderboard">
-          <LeaderboardTab
-            leaderboards={leaderboards}
-            cohorts={cohorts}
-            teams={teams}
-            gameConfig={gameConfig ?? undefined}
-            eventId={events[0]?.id}
-          />
+          <LeaderboardTab leaderboards={leaderboards} />
         </TabsContent>
 
         <TabsContent value="ledger">

@@ -9,7 +9,6 @@ import { StatCard } from '@/components/dashboard/stat-card';
 import { UpdateGameStateDialog } from '@/components/dashboard/update-game-state-dialog';
 import { SetupRound2Dialog } from '@/components/dashboard/setup-round-2-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { formatCurrency } from '@/lib/utils';
 import type { GameConfig, Team, Admin, Loan, Transaction } from '@/lib/types';
 
 interface OverviewTabProps {
@@ -55,8 +54,8 @@ export function OverviewTab({
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 my-6">
-        <StatCard title="V-Cash in Circulation" value={formatCurrency(totalVCash)} icon={<DollarSign />} />
-        <StatCard title="Total Active Loans" value={formatCurrency(totalActiveLoans)} icon={<Landmark />} />
+        <StatCard title="V-Cash in Circulation" value={`₹${totalVCash.toLocaleString()}`} icon={<DollarSign />} />
+        <StatCard title="Total Active Loans" value={`₹${totalActiveLoans.toLocaleString()}`} icon={<Landmark />} />
         <StatCard title="Avg. Credit Score" value={averageCreditScore} icon={<TrendingUp />} />
         <StatCard title="Total Teams" value={teams.length} icon={<Users />} />
         <StatCard title="Total Admins" value={admins.length} icon={<Shield />} />
@@ -75,13 +74,13 @@ export function OverviewTab({
             <div className="flex gap-2">
                 <SetupRound2Dialog gameConfig={gameConfig}>
                     <Button variant="secondary">
-                        <Settings className="mr-2 h-4 w-4" /> Setup Round 2
+                        <Users className="mr-2 h-4 w-4" /> Setup Round 2
                     </Button>
                 </SetupRound2Dialog>
                 <UpdateGameStateDialog gameConfig={gameConfig}>
-                <Button variant="outline">
-                    <Settings className="mr-2 h-4 w-4" /> Update State
-                </Button>
+                    <Button variant="outline">
+                        <Settings className="mr-2 h-4 w-4" /> Update State
+                    </Button>
                 </UpdateGameStateDialog>
             </div>
           ) : (

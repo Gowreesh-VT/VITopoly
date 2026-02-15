@@ -44,9 +44,15 @@ export async function approvePaymentRequest(
     await runTransaction(firestore, async (transaction) => {
         const fromTeamDoc = await transaction.get(fromTeamRef);
         const toTeamDoc = await transaction.get(toTeamRef);
+        const paymentRequestDoc = await transaction.get(paymentRequestRef);
 
-        if (!fromTeamDoc.exists() || !toTeamDoc.exists()) {
-            throw new Error("One or both teams involved in the transaction could not be found.");
+        if (!fromTeamDoc.exists() || !toTeamDoc.exists() || !paymentRequestDoc.exists()) {
+            throw new Error("Required records (teams or payment request) could not be found.");
+        }
+
+        const paymentRequestData = paymentRequestDoc.data() as PaymentRequest;
+        if (paymentRequestData.status !== 'PENDING') {
+            throw new Error(`This request has already been ${paymentRequestData.status.toLowerCase()}.`);
         }
 
         const fromTeamData = fromTeamDoc.data() as Team;
@@ -82,16 +88,17 @@ export async function approvePaymentRequest(
         transaction.set(toTeamTxRef, { ...baseTransaction, id: toTeamTxRef.id, balanceAfterTransaction: newToBalance });
 
         // 3. Create notifications
+        const amountDisplay = `₹${req.amount.toLocaleString()}`; // Hardcoded to INR as per constants
         transaction.set(fromTeamNotificationRef, {
             id: fromTeamNotificationRef.id, eventId: req.eventId, teamId: req.fromTeamId,
             title: 'Payment Approved',
-            message: `Your payment of $${req.amount.toLocaleString()} to ${req.toTeamName} was approved.`,
+            message: `Your payment of ${amountDisplay} to ${req.toTeamName} was approved.`,
             read: false, timestamp, type: 'payment-approved',
         });
         transaction.set(toTeamNotificationRef, {
             id: toTeamNotificationRef.id, eventId: req.eventId, teamId: req.toTeamId,
             title: 'Payment Received',
-            message: `You received a payment of $${req.amount.toLocaleString()} from ${req.fromTeamName}.`,
+            message: `You received a payment of ${amountDisplay} from ${req.fromTeamName}.`,
             read: false, timestamp, type: 'payment-received',
         });
 
@@ -420,7 +427,7 @@ export interface CreateTeamPayload {
     adminId: string;
 }
 
-export async function createTeam(firestore: Firestore, payload: CreateTeamPayload): Promise<void> {
+export async function createTeam(firestore: Firestore, payload: CreateTeamPayload): Promise<string> {
     const { eventId, teamName, initialBalance, adminId } = payload;
 
     const batch = writeBatch(firestore);
@@ -462,6 +469,7 @@ export async function createTeam(firestore: Firestore, payload: CreateTeamPayloa
     }
 
     await batch.commit();
+    return teamRef.id;
 }
 
 

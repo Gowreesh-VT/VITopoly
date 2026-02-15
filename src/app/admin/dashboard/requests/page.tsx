@@ -6,7 +6,7 @@ import type { PaymentRequest, Cohort, Team } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Check, X, ArrowRight } from 'lucide-react';
+import { Check, X, ArrowRight, RotateCw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { approvePaymentRequest, rejectPaymentRequest } from '@/firebase/transactions';
@@ -52,22 +52,39 @@ export default function AdminRequestsPage() {
     }, [paymentRequests, moderatedCohort, teams]);
 
 
+    const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+
     const handleApprove = async (req: PaymentRequest) => {
-        if (!user) return;
+        if (!user || processingIds.has(req.id)) return;
+        setProcessingIds(prev => new Set(prev).add(req.id));
         try {
             await approvePaymentRequest(firestore, req, user.uid);
             toast({ title: "Request Approved", description: `Payment processed.` });
         } catch (error: any) {
             toast({ variant: "destructive", title: "Approval Failed", description: error?.message });
+        } finally {
+            setProcessingIds(prev => {
+                const next = new Set(prev);
+                next.delete(req.id);
+                return next;
+            });
         }
     };
 
     const handleReject = async (req: PaymentRequest) => {
+        if (processingIds.has(req.id)) return;
+        setProcessingIds(prev => new Set(prev).add(req.id));
         try {
             await rejectPaymentRequest(firestore, req);
             toast({ title: "Request Rejected", description: `Payment rejected.` });
         } catch (error: any) {
             toast({ variant: "destructive", title: "Rejection Failed", description: "Could not reject request." });
+        } finally {
+            setProcessingIds(prev => {
+                const next = new Set(prev);
+                next.delete(req.id);
+                return next;
+            });
         }
     };
 
@@ -104,8 +121,26 @@ export default function AdminRequestsPage() {
                                 <TableCell>{currSymbol}{req.amount.toLocaleString()}</TableCell>
                                 <TableCell className="hidden md:table-cell">{formatDistanceToNow(new Date(req.timestamp), { addSuffix: true })}</TableCell>
                                 <TableCell className="text-right space-x-2">
-                                    <Button variant="ghost" size="icon" onClick={() => handleApprove(req)}><Check className="h-4 w-4 text-green-600" /></Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleReject(req)}><X className="h-4 w-4 text-destructive" /></Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        onClick={() => handleApprove(req)}
+                                        disabled={processingIds.has(req.id)}
+                                    >
+                                        {processingIds.has(req.id) ? (
+                                            <RotateCw className="h-4 w-4 animate-spin text-muted-foreground" />
+                                        ) : (
+                                            <Check className="h-4 w-4 text-green-600" />
+                                        )}
+                                    </Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        onClick={() => handleReject(req)}
+                                        disabled={processingIds.has(req.id)}
+                                    >
+                                        <X className="h-4 w-4 text-destructive" />
+                                    </Button>
                                 </TableCell>
                             </TableRow>
                         ))}
