@@ -76,14 +76,16 @@ export function DefaultTeamDialog({ team, adminId, onSuccess, trigger }: Default
           <DialogTitle className="text-destructive flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" /> Declare Team Bankruptcy
           </DialogTitle>
-          <DialogDescription>
-            This action is <strong>IRREVERSIBLE</strong>. It will:
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>Mark <strong>{team.name}</strong> as eliminated.</li>
-              <li>Seize all their properties.</li>
-              <li>Convert properties into <strong>Auction Tokens</strong>.</li>
-              <li>Reset their balance to 0.</li>
-            </ul>
+          <DialogDescription asChild>
+            <div className="text-sm text-muted-foreground">
+              This action is <strong>IRREVERSIBLE</strong>. It will:
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li>Mark <strong>{team.name}</strong> as eliminated.</li>
+                <li>Seize all their properties.</li>
+                <li>Convert properties into <strong>Auction Tokens</strong>.</li>
+                <li>Reset their balance to 0.</li>
+              </ul>
+            </div>
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">

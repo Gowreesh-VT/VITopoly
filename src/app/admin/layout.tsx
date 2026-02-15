@@ -3,11 +3,12 @@ import { AppShell } from '@/components/layout/app-shell';
 import type { NavItem } from '@/components/layout/sidebar-nav';
 
 const adminNavItems: NavItem[] = [
-  { href: '/admin/dashboard', label: 'Dashboard', icon: 'LayoutDashboard' },
-  { href: '/admin/dashboard#requests', label: 'Pending Requests', icon: 'ListChecks' },
-  { href: '/admin/dashboard#teams', label: 'Team Balances', icon: 'Users' },
-  { href: '/admin/dashboard#cohort-leaderboard', label: 'Cohort Leaderboard', icon: 'Trophy'},
-  { href: '/admin/dashboard#log', label: 'Transaction Log', icon: 'History' },
+  { href: '/admin/dashboard/requests', label: 'Requests', icon: 'ListChecks' },
+  { href: '/admin/dashboard/game', label: 'Live Game', icon: 'Terminal' },
+  { href: '/admin/dashboard/properties', label: 'Properties', icon: 'Building' },
+  { href: '/admin/dashboard/teams', label: 'Teams', icon: 'Users' },
+  { href: '/admin/dashboard/leaderboard', label: 'Leaderboard', icon: 'Trophy' },
+  { href: '/admin/dashboard/logs', label: 'Logs', icon: 'History' },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

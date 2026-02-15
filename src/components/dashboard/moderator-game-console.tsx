@@ -22,7 +22,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -33,8 +32,10 @@ import {
     executePropertyUpgrade,
     LandOnPropertyResult 
 } from '@/lib/game-logic';
+import { executeJailFine } from '@/lib/game-logic';
+import { GAME_CONFIG } from '@/lib/game-constants';
 import type { Cohort, Team, Property, Transaction } from '@/lib/types';
-import { Loader2, DollarSign, MapPin, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, IndianRupee, MapPin, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input'; // For manual adjust maybe?
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DefaultTeamDialog } from './default-team-dialog';
@@ -199,6 +200,17 @@ export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProp
         }
     };
 
+    const handleJailFine = async () => {
+        if (!selectedTeam || !user) return;
+        try {
+             await executeJailFine(firestore, selectedTeamId, user.uid, selectedTeam.eventId);
+             toast({ title: 'Success', description: 'Jail Fine Paid!' });
+        } catch (e: any) {
+             console.error(e);
+             toast({ title: 'Error', description: e.message, variant: 'destructive' });
+        }
+    };
+
     const resetAction = () => {
         setActionState('IDLE');
         setDecisionResult(null);
@@ -237,7 +249,7 @@ export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProp
                                 <span className="text-sm font-medium text-muted-foreground">Active Team:</span>
                                 <span className="font-bold">{selectedTeam?.name}</span>
                                 <Badge variant={selectedTeam?.balance && selectedTeam.balance < 0 ? 'destructive' : 'default'}>
-                                    ${selectedTeam?.balance.toLocaleString() ?? 0}
+                                    {GAME_CONFIG.CURRENCY_SYMBOL}{selectedTeam?.balance.toLocaleString() ?? 0}
                                 </Badge>
                             </div>
                         )}
@@ -259,7 +271,7 @@ export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProp
                                             onClick={() => { setSelectedTeamId(team.id); resetAction(); }}
                                         >
                                             <span className="font-semibold">{team.name}</span>
-                                            <span className={team.balance < 0 ? 'text-red-500' : ''}>${team.balance.toLocaleString()}</span>
+                                            <span className={team.balance < 0 ? 'text-red-500' : ''}>{GAME_CONFIG.CURRENCY_SYMBOL}{team.balance.toLocaleString()}</span>
                                         </Button>
                                     ))}
                                 </div>
@@ -298,7 +310,7 @@ export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProp
                                                                 <Badge>For Sale</Badge>
                                                             </div>
                                                             <div className="text-2xl font-bold flex items-center gap-2">
-                                                                <DollarSign className="w-5 h-5" />
+                                                                <IndianRupee className="w-5 h-5" />
                                                                 {decisionResult.property.baseValue.toLocaleString()}
                                                             </div>
                                                             <div className="flex gap-2">
@@ -317,7 +329,7 @@ export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProp
                                                                 <Badge variant="destructive">Owned by {decisionResult.ownerName}</Badge>
                                                             </div>
                                                             <div className="text-2xl font-bold text-red-600 flex items-center gap-2">
-                                                                <DollarSign className="w-5 h-5" />
+                                                                <IndianRupee className="w-5 h-5" />
                                                                 {decisionResult.rentAmount.toLocaleString()} Rent
                                                             </div>
                                                             <Button className="w-full" onClick={handleConfirmRent}>
@@ -338,7 +350,7 @@ export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProp
                                                                         disabled={selectedTeam!.balance < (decisionResult.property.houseValue || 0)}
                                                                         className="w-full"
                                                                     >
-                                                                        Build House (${decisionResult.property.houseValue.toLocaleString()})
+                                                                        Build House ({GAME_CONFIG.CURRENCY_SYMBOL}{decisionResult.property.houseValue.toLocaleString()})
                                                                     </Button>
                                                                 )}
 
@@ -348,7 +360,7 @@ export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProp
                                                                         disabled={selectedTeam!.balance < (decisionResult.property.hotelValue || 0)}
                                                                         className="w-full"
                                                                     >
-                                                                        Build Hotel (${decisionResult.property.hotelValue.toLocaleString()})
+                                                                        Build Hotel ({GAME_CONFIG.CURRENCY_SYMBOL}{decisionResult.property.hotelValue.toLocaleString()})
                                                                     </Button>
                                                                 )}
 
@@ -368,7 +380,10 @@ export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProp
                                         
                                             <div className="grid grid-cols-2 gap-2">
                                                 <Button variant="secondary" onClick={handlePassGo}>
-                                                    <DollarSign className="w-4 h-4 mr-2" /> Pass Go
+                                                    <IndianRupee className="w-4 h-4 mr-2" /> Pass Go (+{GAME_CONFIG.CURRENCY_SYMBOL}{GAME_CONFIG.PASS_GO_REWARD})
+                                                </Button>
+                                                <Button variant="secondary" onClick={handleJailFine}>
+                                                    <AlertTriangle className="w-4 h-4 mr-2" /> Jail Fine (-{GAME_CONFIG.CURRENCY_SYMBOL}{GAME_CONFIG.JAIL_FINE})
                                                 </Button>
                                                 {selectedTeam && user && (
                                                     <DefaultTeamDialog 

@@ -43,3 +43,9 @@ export const AUCTION_TOKENS_CATALOG = [
         type: 'SHIELD',
     },
 ];
+
+export const GAME_CONFIG = {
+    PASS_GO_REWARD: 2000,
+    JAIL_FINE: 500,
+    CURRENCY_SYMBOL: '₹',
+};

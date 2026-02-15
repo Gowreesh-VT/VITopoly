@@ -304,7 +304,7 @@ export interface RepayLoanPayload {
     teamId: string;
     loanId: string;
     amount: number;
-    adminId: string;
+    adminId?: string;
 }
 
 export async function repayLoan(firestore: Firestore, payload: RepayLoanPayload): Promise<void> {
@@ -338,10 +338,12 @@ export async function repayLoan(firestore: Firestore, payload: RepayLoanPayload)
         transaction.update(loanRef, { status: 'REPAID' });
 
         const newTransaction: Transaction = {
-            id: transactionRef.id, eventId, timestamp, adminId, amount,
+            id: transactionRef.id, eventId, timestamp,
+            adminId: adminId || null,
+            amount,
             fromTeamId: teamId, fromTeamName: teamData.name,
             toTeamId: null, toTeamName: 'Bank',
-            type: 'LOAN_REPAID', reason: `Repayment of loan`,
+            type: 'LOAN_REPAID', reason: adminId ? `Repayment of loan (Admin: ${adminId})` : `Loan Repayment (Self-Service)`,
             balanceAfterTransaction: newBalance,
         };
         transaction.set(transactionRef, newTransaction);

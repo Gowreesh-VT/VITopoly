@@ -176,14 +176,10 @@ export type Property = {
   ownerTeamName?: string | null;
   status: 'UNOWNED' | 'OWNED' | 'SEIZED' | 'AUCTION';
   upgradeLevel?: 'NONE' | 'HOUSE' | 'HOTEL';
+  previousOwnerName?: string; // For seized properties
 }
 
-export type Token = {
-  id: string;
-  teamId: string;
-  strategyTokens: number;
-  defenseTokens: number;
-};
+
 
 export type AuctionTokenType = 'ACADEMIC_BOOST' | 'PRIME_SABOTAGE' | 'FINANCE_BOOST' | 'SHIELD';
 
@@ -215,6 +211,9 @@ export type LeaderboardRanking = {
   teamName: string;
   score: number;
   rank: number;
+  cash: number;
+  propertyValue: number;
+  creditScore: number;
 }
 
 export type Leaderboard = {

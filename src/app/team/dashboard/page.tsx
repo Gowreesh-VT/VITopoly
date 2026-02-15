@@ -21,13 +21,14 @@ import { format } from 'date-fns';
 import { Wallet, TrendingUp, HandCoins, Activity, ArrowRight, Calendar, Trophy, ShieldCheck, Star, History } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, orderBy, limit } from 'firebase/firestore';
-import type { Team, Transaction, Loan, Event, Token, Leaderboard } from '@/lib/types';
+import type { Team, Transaction, Loan, Event } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { InitiatePaymentDialog } from '@/components/dashboard/initiate-payment-dialog';
 import { useMemo, useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { RepayLoanDialog } from '@/components/dashboard/repay-loan-dialog';
 
 export default function TeamDashboardPage() {
   const { user } = useUser();
@@ -68,24 +69,13 @@ export default function TeamDashboardPage() {
   ), [firestore, eventId, teamId]);
   const { data: otherTeams, isLoading: areOtherTeamsLoading } = useCollection<Team>(allTeamsQuery);
   
-  const tokensQuery = useMemoFirebase(() => (
-      teamId ? query(collection(firestore, 'tokens'), where('teamId', '==', teamId)) : null
-  ), [firestore, teamId]);
-  const { data: tokens, isLoading: areTokensLoading } = useCollection<Token>(tokensQuery);
-  const teamTokens = tokens?.[0];
 
-  const leaderboardQuery = useMemoFirebase(() => (
-      eventId ? query(collection(firestore, 'leaderboards'), where('eventId', '==', eventId), limit(1)) : null
-  ), [firestore, eventId]);
-  const { data: leaderboards, isLoading: areLeaderboardsLoading } = useCollection<Leaderboard>(leaderboardQuery);
-  const leaderboard = leaderboards?.[0];
 
-  const teamOverallRank = useMemo(() => leaderboard?.overallRankings?.find(r => r.teamId === teamId), [leaderboard, teamId]);
-  const teamCohortRank = useMemo(() => leaderboard?.rankings?.find(r => r.teamId === teamId), [leaderboard, teamId]);
+
 
   const activeLoan = loans?.[0];
 
-  const isLoading = isUserProfileLoading || isTeamLoading || areTransactionsLoading || areLoansLoading || areOtherTeamsLoading || isEventLoading || areTokensLoading || areLeaderboardsLoading;
+  const isLoading = isUserProfileLoading || isTeamLoading || areTransactionsLoading || areLoansLoading || areOtherTeamsLoading || isEventLoading;
 
   if (isLoading || !isClient) {
     return <DashboardSkeleton />;
@@ -112,8 +102,7 @@ export default function TeamDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Current Balance" value={formatCurrency(team.balance)} icon={<Wallet />} />
         <StatCard title="Credit Score" value={team.creditScore} icon={<TrendingUp />} />
-        <StatCard title="Overall Rank" value={teamOverallRank ? `#${teamOverallRank.rank}` : 'N/A'} icon={<Trophy />} description={teamOverallRank ? `${teamOverallRank.score.toFixed(2)} pts` : 'Not ranked'} />
-        <StatCard title="Cohort Rank" value={teamCohortRank ? `#${teamCohortRank.rank}`: 'N/A'} icon={<Star />} description={teamCohortRank ? `${teamCohortRank.score.toFixed(2)} pts` : 'Not ranked'} />
+
         <StatCard id="loan-status" title="Loan Status" value={activeLoan ? formatCurrency(activeLoan.amount) : 'None'} icon={<HandCoins />} description={activeLoan ? 'Active loan' : 'No active loans'} />
         <StatCard title="Account Status" value={team.status} icon={<Activity />} />
         <StatCard title="Current Event" value={event?.name ?? 'Loading...'} icon={<Calendar />} />
@@ -128,28 +117,14 @@ export default function TeamDashboardPage() {
             <CardContent className="flex flex-col gap-2">
               <TeamQrDialog team={team} />
               <InitiatePaymentDialog fromTeam={team} otherTeams={otherTeams ?? []} eventId={eventId!} />
-            </CardContent>
-          </Card>
-          <Card className="lg:col-span-2">
-            <CardHeader>
-                <CardTitle>Token Inventory</CardTitle>
-                <CardDescription>Your team's special tokens.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-4 rounded-lg border p-4">
-                    <ShieldCheck className="h-8 w-8 text-primary" />
-                    <div>
-                        <p className="text-2xl font-bold">{teamTokens?.strategyTokens ?? 0}</p>
-                        <p className="text-sm text-muted-foreground">Strategy Tokens</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-4 rounded-lg border p-4">
-                    <ShieldCheck className="h-8 w-8 text-accent" />
-                    <div>
-                        <p className="text-2xl font-bold">{teamTokens?.defenseTokens ?? 0}</p>
-                        <p className="text-sm text-muted-foreground">Defense Tokens</p>
-                    </div>
-                </div>
+              {activeLoan && (
+                  <RepayLoanDialog team={team} activeLoan={activeLoan}>
+                      <Button variant="outline" className="w-full">
+                          <HandCoins className="mr-2 h-4 w-4" />
+                          Repay Loan
+                      </Button>
+                  </RepayLoanDialog>
+              )}
             </CardContent>
           </Card>
        </div>

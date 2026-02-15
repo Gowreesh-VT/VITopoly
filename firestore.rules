@@ -113,9 +113,9 @@ service cloud.firestore {
     // Any signed-in user can read; admins and super-admin can write.
     match /tokens/{tokenId} {
       allow read:   if isSignedIn();
-      allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin();
-      allow delete: if isSuperAdmin();
+      allow create: if isSuperAdmin() || isAdminOrAbove(request.resource.data.eventId);
+      allow update: if isSuperAdmin() || isAdminOrAbove(resource.data.eventId);
+      allow delete: if isSuperAdmin() || isAdminOrAbove(resource.data.eventId);
     }
 
     // --- /auctions/{auctionId} ---
@@ -123,9 +123,9 @@ service cloud.firestore {
     // Any signed-in user can read; admins and super-admin can write.
     match /auctions/{auctionId} {
       allow read:   if isSignedIn();
-      allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin();
-      allow delete: if isSuperAdmin();
+      allow create: if isSuperAdmin() || isAdminOrAbove(request.resource.data.eventId);
+      allow update: if isSuperAdmin() || isAdminOrAbove(resource.data.eventId);
+      allow delete: if isSuperAdmin() || isAdminOrAbove(resource.data.eventId);
     }
 
     // --- /leaderboards/{leaderboardId} ---
@@ -133,8 +133,8 @@ service cloud.firestore {
     // Any signed-in user can read; only super-admin can write.
     match /leaderboards/{leaderboardId} {
       allow read:   if isSignedIn();
-      allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin();
+      allow create: if isSuperAdmin() || isAdminOrAbove(request.resource.data.eventId);
+      allow update: if isSuperAdmin() || isAdminOrAbove(resource.data.eventId);
       allow delete: if isSuperAdmin();
     }
 
@@ -180,12 +180,19 @@ service cloud.firestore {
       match /teams/{teamId} {
         allow get:  if isAdminOrAbove(eventId) || isTeamMember(eventId, teamId);
         allow list: if isSuperAdmin() || isAdminOrAbove(eventId) || isTeamUserForEvent(eventId);
-        allow create, update, delete: if isSuperAdmin() || isAdminOrAbove(eventId);
+        // Allow teams to update themselves (e.g. for loan repayment updates to balance/status)
+        allow update: if isSuperAdmin() || isAdminOrAbove(eventId) || isTeamMember(eventId, teamId);
+        allow create, delete: if isSuperAdmin() || isAdminOrAbove(eventId);
 
         // --- /events/{eventId}/teams/{teamId}/transactions/{transactionId} ---
         // Transaction history for a team.
         match /transactions/{transactionId} {
           allow read:  if isAdminOrAbove(eventId) || isTeamMember(eventId, teamId);
+          // Allow teams to create LOAN_REPAID transactions for themselves
+          allow create: if isAdminOrAbove(eventId)
+                        || (isTeamMember(eventId, teamId) 
+                            && request.resource.data.type == 'LOAN_REPAID'
+                            && request.resource.data.fromTeamId == teamId);
           allow write: if isAdminOrAbove(eventId);
         }
 
@@ -193,6 +200,11 @@ service cloud.firestore {
         // Loan records for a team.
         match /loans/{loanId} {
           allow read:  if isAdminOrAbove(eventId) || isTeamMember(eventId, teamId);
+          // Allow teams to update their loan status to REPAID
+          allow update: if isAdminOrAbove(eventId) 
+                        || (isTeamMember(eventId, teamId) 
+                            && request.resource.data.status == 'REPAID'
+                            && resource.data.status == 'ACTIVE');
           allow write: if isAdminOrAbove(eventId);
         }
 
@@ -202,7 +214,9 @@ service cloud.firestore {
         // - Admins can read and write (create notifications).
         match /notifications/{notificationId} {
           allow read:   if isAdminOrAbove(eventId) || isTeamMember(eventId, teamId);
-          allow create: if isAdminOrAbove(eventId);
+          // Allow self-notifications (e.g. loan repaid)
+          allow create: if isAdminOrAbove(eventId) 
+                        || (isTeamMember(eventId, teamId) && request.resource.data.teamId == teamId);
           allow update: if isAdminOrAbove(eventId) || isTeamMember(eventId, teamId);
           allow delete: if isAdminOrAbove(eventId);
         }

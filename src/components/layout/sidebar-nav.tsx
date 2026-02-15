@@ -20,6 +20,8 @@ import {
   Group,
   Home,
   Trophy,
+  Building,
+  Terminal,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -43,6 +45,8 @@ const iconMap: Record<string, LucideIcon> = {
   Group,
   Home,
   Trophy,
+  Building,
+  Terminal,
 };
 
 export type NavItem = {

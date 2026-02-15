@@ -12,6 +12,7 @@ import {
     addDoc
 } from 'firebase/firestore';
 import type { Property, Team, Transaction, AuctionToken } from './types';
+import { GAME_CONFIG } from './game-constants';
 
 // Return types for UI decisions
 export type LandOnPropertyResult =
@@ -229,7 +230,7 @@ export async function executePassGo(
     adminId: string,
     eventId: string
 ) {
-    const SALARY_AMOUNT = 2000;
+    const SALARY_AMOUNT = GAME_CONFIG.PASS_GO_REWARD;
 
     const teamRef = doc(firestore, 'events', eventId, 'teams', teamId);
 
@@ -265,6 +266,53 @@ export async function executePassGo(
     await batch.commit();
 }
 
+export async function executeJailFine(
+    firestore: Firestore,
+    teamId: string,
+    adminId: string,
+    eventId: string
+) {
+    const FINE_AMOUNT = GAME_CONFIG.JAIL_FINE;
+
+    const teamRef = doc(firestore, 'events', eventId, 'teams', teamId);
+
+    // Initial Read
+    const teamDoc = await getDoc(teamRef);
+    if (!teamDoc.exists()) throw new Error("Team not found");
+
+    const team = teamDoc.data() as Team;
+
+    if (team.balance < FINE_AMOUNT) {
+        throw new Error('Insufficient funds to pay Jail Fine');
+    }
+
+    const newBalance = team.balance - FINE_AMOUNT;
+
+    // Write Batch
+    const batch = writeBatch(firestore);
+
+    batch.update(teamRef, { balance: newBalance });
+
+    const tRef = doc(collection(firestore, 'events', eventId, 'teams', team.id, 'transactions'));
+    const t: Transaction = {
+        id: tRef.id,
+        eventId: eventId,
+        timestamp: new Date().toISOString(),
+        fromTeamId: team.id,
+        fromTeamName: team.name,
+        toTeamId: null, // System
+        toTeamName: 'Bank', // or Jail
+        adminId: adminId,
+        type: 'PENALTY',
+        amount: FINE_AMOUNT,
+        reason: 'Paid Jail Fine',
+        balanceAfterTransaction: newBalance
+    };
+    batch.set(tRef, t);
+
+    await batch.commit();
+}
+
 export async function executeTeamDefault(
     firestore: Firestore,
     teamId: string,
@@ -290,7 +338,8 @@ export async function executeTeamDefault(
     batch.update(teamRef, {
         status: 'SUSPENDED',
         isEliminated: true,
-        balance: 0 // Reset balance to 0
+        balance: 0, // Reset balance to 0
+        creditScore: 0 // Reset credit score to 0
     });
 
     // NOTE: Seizing assets requires querying, which is handled by 'seizeTeamAssets' helper.
@@ -324,7 +373,8 @@ export async function seizeTeamAssets(firestore: Firestore, teamId: string, admi
     batch.update(teamRef, {
         status: 'SUSPENDED', // Using SUSPENDED as proxy for Eliminated for now
         isEliminated: true,
-        balance: 0
+        balance: 0,
+        creditScore: 0
     });
 
     // 2. Seize Properties -> Convert to Auction Token Candidates
@@ -335,7 +385,8 @@ export async function seizeTeamAssets(firestore: Firestore, teamId: string, admi
         batch.update(propDoc.ref, {
             status: 'SEIZED',
             ownerTeamId: null,
-            ownerTeamName: null
+            ownerTeamName: null,
+            previousOwnerName: team.name
         });
 
         // Optional: Auto-create a Token?
@@ -494,4 +545,133 @@ export async function executePropertyUpgrade(
         await batch.commit();
         return;
     }
+}
+
+export async function calculateLeaderboard(
+    firestore: Firestore,
+    eventId: string,
+    gameConfig?: { cashWeight: number; propertyWeight: number; creditWeight: number }
+) {
+    // defaults
+    const weights = {
+        cash: gameConfig?.cashWeight ?? 1,
+        property: gameConfig?.propertyWeight ?? 1,
+        credit: gameConfig?.creditWeight ?? 1
+    };
+
+    const teamsRef = collection(firestore, 'events', eventId, 'teams');
+    const propertiesRef = collection(firestore, 'properties');
+
+    const [teamsSnap, propertiesSnap] = await Promise.all([
+        getDocs(teamsRef),
+        getDocs(propertiesRef)
+    ]);
+
+    console.log(`Fetched ${teamsSnap.size} teams and ${propertiesSnap.size} properties.`);
+
+    // Include ALL teams for final leaderboard, even suspended ones.
+    const teams = teamsSnap.docs.map(d => d.data() as Team);
+    // Optional: Filter out truly invalid teams if needed, but 'SUSPENDED' usually means bankrupt, they should still be ranked (likely last).
+
+    console.log(`Teams to rank: ${teams.length}`);
+
+    const properties = propertiesSnap.docs.map(d => d.data() as Property);
+
+    // Calculate Scores
+    const teamScores = teams.map(team => {
+        const cashValue = team.balance;
+
+        // Credit score calculation
+        // If team is suspended/bankrupt, credit score might be 0, but let's use whatever is there.
+        const creditValue = (team.creditScore || 0);
+
+        const teamProperties = properties.filter(p => p.ownerTeamId === team.id);
+        const propertyValue = teamProperties.reduce((sum, p) => {
+            let val = p.baseValue;
+            if (p.upgradeLevel === 'HOUSE') val += (p.houseValue || 0);
+            if (p.upgradeLevel === 'HOTEL') val += (p.hotelValue || 0);
+            return sum + val;
+        }, 0);
+
+        const score =
+            (cashValue * weights.cash) +
+            (propertyValue * weights.property) +
+            (creditValue * weights.credit);
+
+        console.log(`Team ${team.name} (${team.status}): Cash=${cashValue}, Prop=${propertyValue}, Credit=${creditValue} -> Score=${score}`);
+
+        return {
+            teamId: team.id,
+            teamName: team.name,
+            score: score,
+            cohortId: team.cohortId,
+            cash: cashValue,
+            propertyValue: propertyValue,
+            creditScore: creditValue
+        };
+    });
+
+    // Sort by Score Descending
+    teamScores.sort((a, b) => b.score - a.score);
+
+    // --- Overall Ranking ---
+    const overallRankings = teamScores.map((item, index) => ({
+        teamId: item.teamId,
+        teamName: item.teamName,
+        score: item.score,
+        rank: index + 1,
+        cash: item.cash,
+        propertyValue: item.propertyValue,
+        creditScore: item.creditScore
+    }));
+
+    const eventLeaderboardRef = doc(collection(firestore, 'leaderboards'), eventId);
+    const eventData = {
+        id: eventId,
+        eventId: eventId,
+        overallRankings: overallRankings,
+        rankings: overallRankings,
+        updatedAt: new Date().toISOString()
+    };
+
+    // --- Cohort Rankings ---
+    const cohortIds = Array.from(new Set(teamScores.map(t => t.cohortId).filter(id => !!id))) as string[];
+
+    const cohortUpdates = cohortIds.map(cohortId => {
+        const cohortTeams = teamScores.filter(t => t.cohortId === cohortId);
+        cohortTeams.sort((a, b) => b.score - a.score);
+
+        const cohortRankings = cohortTeams.map((item, index) => ({
+            teamId: item.teamId,
+            teamName: item.teamName,
+            score: item.score,
+            rank: index + 1,
+            cash: item.cash,
+            propertyValue: item.propertyValue,
+            creditScore: item.creditScore
+        }));
+
+        const cohortRef = doc(collection(firestore, 'leaderboards'), cohortId);
+        return {
+            ref: cohortRef,
+            data: {
+                id: cohortId,
+                eventId: eventId,
+                cohortId: cohortId,
+                rankings: cohortRankings,
+                updatedAt: new Date().toISOString()
+            }
+        };
+    });
+
+    // Execute updates in a transaction or batch
+    await runTransaction(firestore, async (transaction) => {
+        // Update Event Leaderboard
+        transaction.set(eventLeaderboardRef, eventData);
+
+        // Update each Cohort Leaderboard
+        for (const update of cohortUpdates) {
+            transaction.set(update.ref, update.data);
+        }
+    });
 }
