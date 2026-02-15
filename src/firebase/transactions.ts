@@ -1,12 +1,12 @@
 'use client';
 import {
-  Firestore,
-  doc,
-  collection,
-  runTransaction,
-  writeBatch,
-  arrayUnion,
-  arrayRemove,
+    Firestore,
+    doc,
+    collection,
+    runTransaction,
+    writeBatch,
+    arrayUnion,
+    arrayRemove,
 } from 'firebase/firestore';
 import type { PaymentRequest, Loan, Transaction, Team, Event, Notification, Cohort, Property } from '@/lib/types';
 import { updateDocumentNonBlocking } from './non-blocking-updates';
@@ -27,77 +27,77 @@ import { updateDocumentNonBlocking } from './non-blocking-updates';
  * @throws Throws an error if the transaction fails (e.g., insufficient funds).
  */
 export async function approvePaymentRequest(
-  firestore: Firestore,
-  req: PaymentRequest,
-  adminId: string
+    firestore: Firestore,
+    req: PaymentRequest,
+    adminId: string
 ): Promise<void> {
-  const fromTeamRef = doc(firestore, 'events', req.eventId, 'teams', req.fromTeamId);
-  const toTeamRef = doc(firestore, 'events', req.eventId, 'teams', req.toTeamId);
-  const paymentRequestRef = doc(firestore, 'events', req.eventId, 'payment_requests', req.id);
-  
-  const fromTeamTxRef = doc(collection(firestore, 'events', req.eventId, 'teams', req.fromTeamId, 'transactions'));
-  const toTeamTxRef = doc(collection(firestore, 'events', req.eventId, 'teams', req.toTeamId, 'transactions'));
-  const fromTeamNotificationRef = doc(collection(firestore, 'events', req.eventId, 'teams', req.fromTeamId, 'notifications'));
-  const toTeamNotificationRef = doc(collection(firestore, 'events', req.eventId, 'teams', req.toTeamId, 'notifications'));
+    const fromTeamRef = doc(firestore, 'events', req.eventId, 'teams', req.fromTeamId);
+    const toTeamRef = doc(firestore, 'events', req.eventId, 'teams', req.toTeamId);
+    const paymentRequestRef = doc(firestore, 'events', req.eventId, 'payment_requests', req.id);
+
+    const fromTeamTxRef = doc(collection(firestore, 'events', req.eventId, 'teams', req.fromTeamId, 'transactions'));
+    const toTeamTxRef = doc(collection(firestore, 'events', req.eventId, 'teams', req.toTeamId, 'transactions'));
+    const fromTeamNotificationRef = doc(collection(firestore, 'events', req.eventId, 'teams', req.fromTeamId, 'notifications'));
+    const toTeamNotificationRef = doc(collection(firestore, 'events', req.eventId, 'teams', req.toTeamId, 'notifications'));
 
 
-  await runTransaction(firestore, async (transaction) => {
-    const fromTeamDoc = await transaction.get(fromTeamRef);
-    const toTeamDoc = await transaction.get(toTeamRef);
+    await runTransaction(firestore, async (transaction) => {
+        const fromTeamDoc = await transaction.get(fromTeamRef);
+        const toTeamDoc = await transaction.get(toTeamRef);
 
-    if (!fromTeamDoc.exists() || !toTeamDoc.exists()) {
-      throw new Error("One or both teams involved in the transaction could not be found.");
-    }
+        if (!fromTeamDoc.exists() || !toTeamDoc.exists()) {
+            throw new Error("One or both teams involved in the transaction could not be found.");
+        }
 
-    const fromTeamData = fromTeamDoc.data() as Team;
-    const toTeamData = toTeamDoc.data() as Team;
+        const fromTeamData = fromTeamDoc.data() as Team;
+        const toTeamData = toTeamDoc.data() as Team;
 
-    if (fromTeamData.balance < req.amount) {
-      throw new Error(`Team "${fromTeamData.name}" has insufficient funds to complete this payment.`);
-    }
+        if (fromTeamData.balance < req.amount) {
+            throw new Error(`Team "${fromTeamData.name}" has insufficient funds to complete this payment.`);
+        }
 
-    const newFromBalance = fromTeamData.balance - req.amount;
-    const newToBalance = toTeamData.balance + req.amount;
-    const timestamp = new Date().toISOString();
+        const newFromBalance = fromTeamData.balance - req.amount;
+        const newToBalance = toTeamData.balance + req.amount;
+        const timestamp = new Date().toISOString();
 
-    // 1. Update team balances
-    transaction.update(fromTeamRef, { balance: newFromBalance });
-    transaction.update(toTeamRef, { balance: newToBalance });
+        // 1. Update team balances
+        transaction.update(fromTeamRef, { balance: newFromBalance });
+        transaction.update(toTeamRef, { balance: newToBalance });
 
-    // 2. Create transaction logs
-    const baseTransaction: Omit<Transaction, 'id' | 'balanceAfterTransaction'> = {
-      eventId: req.eventId,
-      timestamp: timestamp,
-      adminId: adminId,
-      type: 'SETTLEMENT',
-      amount: req.amount,
-      reason: req.reason,
-      fromTeamId: req.fromTeamId,
-      fromTeamName: req.fromTeamName,
-      toTeamId: req.toTeamId,
-      toTeamName: req.toTeamName,
-    };
+        // 2. Create transaction logs
+        const baseTransaction: Omit<Transaction, 'id' | 'balanceAfterTransaction'> = {
+            eventId: req.eventId,
+            timestamp: timestamp,
+            adminId: adminId,
+            type: 'SETTLEMENT',
+            amount: req.amount,
+            reason: req.reason,
+            fromTeamId: req.fromTeamId,
+            fromTeamName: req.fromTeamName,
+            toTeamId: req.toTeamId,
+            toTeamName: req.toTeamName,
+        };
 
-    transaction.set(fromTeamTxRef, { ...baseTransaction, id: fromTeamTxRef.id, balanceAfterTransaction: newFromBalance });
-    transaction.set(toTeamTxRef, { ...baseTransaction, id: toTeamTxRef.id, balanceAfterTransaction: newToBalance });
+        transaction.set(fromTeamTxRef, { ...baseTransaction, id: fromTeamTxRef.id, balanceAfterTransaction: newFromBalance });
+        transaction.set(toTeamTxRef, { ...baseTransaction, id: toTeamTxRef.id, balanceAfterTransaction: newToBalance });
 
-    // 3. Create notifications
-    transaction.set(fromTeamNotificationRef, {
-        id: fromTeamNotificationRef.id, eventId: req.eventId, teamId: req.fromTeamId,
-        title: 'Payment Approved',
-        message: `Your payment of $${req.amount.toLocaleString()} to ${req.toTeamName} was approved.`,
-        read: false, timestamp, type: 'payment-approved',
+        // 3. Create notifications
+        transaction.set(fromTeamNotificationRef, {
+            id: fromTeamNotificationRef.id, eventId: req.eventId, teamId: req.fromTeamId,
+            title: 'Payment Approved',
+            message: `Your payment of $${req.amount.toLocaleString()} to ${req.toTeamName} was approved.`,
+            read: false, timestamp, type: 'payment-approved',
+        });
+        transaction.set(toTeamNotificationRef, {
+            id: toTeamNotificationRef.id, eventId: req.eventId, teamId: req.toTeamId,
+            title: 'Payment Received',
+            message: `You received a payment of $${req.amount.toLocaleString()} from ${req.fromTeamName}.`,
+            read: false, timestamp, type: 'payment-received',
+        });
+
+        // 4. Update payment request status
+        transaction.update(paymentRequestRef, { status: 'APPROVED' });
     });
-    transaction.set(toTeamNotificationRef, {
-        id: toTeamNotificationRef.id, eventId: req.eventId, teamId: req.toTeamId,
-        title: 'Payment Received',
-        message: `You received a payment of $${req.amount.toLocaleString()} from ${req.fromTeamName}.`,
-        read: false, timestamp, type: 'payment-received',
-    });
-
-    // 4. Update payment request status
-    transaction.update(paymentRequestRef, { status: 'APPROVED' });
-  });
 }
 
 /**
@@ -107,30 +107,30 @@ export async function approvePaymentRequest(
  * @param req - The PaymentRequest object to be rejected.
  */
 export async function rejectPaymentRequest(
-  firestore: Firestore,
-  req: PaymentRequest
+    firestore: Firestore,
+    req: PaymentRequest
 ): Promise<void> {
-  const batch = writeBatch(firestore);
-  const paymentRequestRef = doc(firestore, 'events', req.eventId, 'payment_requests', req.id);
-  const notificationRef = doc(collection(firestore, 'events', req.eventId, 'teams', req.fromTeamId, 'notifications'));
+    const batch = writeBatch(firestore);
+    const paymentRequestRef = doc(firestore, 'events', req.eventId, 'payment_requests', req.id);
+    const notificationRef = doc(collection(firestore, 'events', req.eventId, 'teams', req.fromTeamId, 'notifications'));
 
-  // Update request status
-  batch.update(paymentRequestRef, { status: 'REJECTED' });
+    // Update request status
+    batch.update(paymentRequestRef, { status: 'REJECTED' });
 
-  // Create notification for the sender
-  const notification: Notification = {
-    id: notificationRef.id,
-    eventId: req.eventId,
-    teamId: req.fromTeamId,
-    title: 'Payment Rejected',
-    message: `Your request to pay ${req.toTeamName} $${req.amount.toLocaleString()} was rejected.`,
-    read: false,
-    timestamp: new Date().toISOString(),
-    type: 'payment-rejected'
-  };
-  batch.set(notificationRef, notification);
-  
-  await batch.commit();
+    // Create notification for the sender
+    const notification: Notification = {
+        id: notificationRef.id,
+        eventId: req.eventId,
+        teamId: req.fromTeamId,
+        title: 'Payment Rejected',
+        message: `Your request to pay ${req.toTeamName} $${req.amount.toLocaleString()} was rejected.`,
+        read: false,
+        timestamp: new Date().toISOString(),
+        type: 'payment-rejected'
+    };
+    batch.set(notificationRef, notification);
+
+    await batch.commit();
 }
 
 
@@ -156,8 +156,8 @@ export interface IssueLoanPayload {
  * @throws Throws an error if the transaction fails.
  */
 export async function issueLoan(
-  firestore: Firestore,
-  payload: IssueLoanPayload
+    firestore: Firestore,
+    payload: IssueLoanPayload
 ): Promise<void> {
     const { eventId, teamId, adminId, amount, reason } = payload;
 
@@ -173,7 +173,7 @@ export async function issueLoan(
 
         if (!teamDoc.exists()) throw new Error("Team not found.");
         if (!eventDoc.exists()) throw new Error("Event not found.");
-        
+
         const teamData = teamDoc.data() as Team;
         const eventData = eventDoc.data() as Event;
 
@@ -188,8 +188,8 @@ export async function issueLoan(
         const newCreditScore = teamData.creditScore - 5;
         const timestamp = new Date().toISOString();
 
-        transaction.update(teamRef, { 
-            balance: newBalance, 
+        transaction.update(teamRef, {
+            balance: newBalance,
             creditScore: newCreditScore,
             hasActiveLoan: true,
             activeLoanId: loanRef.id,
@@ -208,7 +208,7 @@ export async function issueLoan(
             type: 'LOAN_ISSUED', balanceAfterTransaction: newBalance,
         };
         transaction.set(transactionRef, newTransaction);
-        
+
         const newNotification: Notification = {
             id: notificationRef.id, eventId, teamId,
             title: 'Loan Issued',
@@ -236,7 +236,7 @@ export async function creditTeam(firestore: Firestore, payload: CreditDebitPaylo
     await runTransaction(firestore, async (transaction) => {
         const teamDoc = await transaction.get(teamRef);
         if (!teamDoc.exists()) throw new Error("Team not found.");
-        
+
         const teamData = teamDoc.data() as Team;
         const newBalance = teamData.balance + amount;
         const newCreditScore = teamData.creditScore + 2;
@@ -251,7 +251,7 @@ export async function creditTeam(firestore: Firestore, payload: CreditDebitPaylo
             type: 'REWARD', balanceAfterTransaction: newBalance,
         };
         transaction.set(transactionRef, newTransaction);
-        
+
         const newNotification: Notification = {
             id: notificationRef.id, eventId, teamId,
             title: `You've Received a Reward!`,
@@ -288,7 +288,7 @@ export async function debitTeam(firestore: Firestore, payload: CreditDebitPayloa
             type: 'PENALTY', balanceAfterTransaction: newBalance,
         };
         transaction.set(transactionRef, newTransaction);
-        
+
         const newNotification: Notification = {
             id: notificationRef.id, eventId, teamId,
             title: 'Penalty Incurred',
@@ -329,8 +329,8 @@ export async function repayLoan(firestore: Firestore, payload: RepayLoanPayload)
         const newCreditScore = teamData.creditScore + 5;
         const timestamp = new Date().toISOString();
 
-        transaction.update(teamRef, { 
-            balance: newBalance, 
+        transaction.update(teamRef, {
+            balance: newBalance,
             creditScore: newCreditScore,
             hasActiveLoan: false,
             activeLoanId: null,
@@ -345,7 +345,7 @@ export async function repayLoan(firestore: Firestore, payload: RepayLoanPayload)
             balanceAfterTransaction: newBalance,
         };
         transaction.set(transactionRef, newTransaction);
-        
+
         const newNotification: Notification = {
             id: notificationRef.id, eventId, teamId,
             title: 'Loan Repaid',
@@ -420,7 +420,7 @@ export interface CreateTeamPayload {
 
 export async function createTeam(firestore: Firestore, payload: CreateTeamPayload): Promise<void> {
     const { eventId, teamName, initialBalance, adminId } = payload;
-    
+
     const batch = writeBatch(firestore);
 
     // 1. Create the new team document
@@ -458,7 +458,7 @@ export async function createTeam(firestore: Firestore, payload: CreateTeamPayloa
         };
         batch.set(transactionRef, newTransaction);
     }
-    
+
     await batch.commit();
 }
 
@@ -584,7 +584,7 @@ export async function assignPropertyOwner(firestore: Firestore, { eventId, prope
 export async function addTeamToCohort(firestore: Firestore, { cohortId, teamId, eventId }: { cohortId: string, teamId: string, eventId: string }) {
     const cohortRef = doc(firestore, 'cohorts', cohortId);
     const teamRef = doc(firestore, 'events', eventId, 'teams', teamId);
-    
+
     const batch = writeBatch(firestore);
     batch.update(cohortRef, { teamIds: arrayUnion(teamId) });
     batch.update(teamRef, { cohortId: cohortId });
@@ -594,11 +594,17 @@ export async function addTeamToCohort(firestore: Firestore, { cohortId, teamId, 
 export async function removeTeamFromCohort(firestore: Firestore, { cohortId, teamId, eventId }: { cohortId: string, teamId: string, eventId: string }) {
     const cohortRef = doc(firestore, 'cohorts', cohortId);
     const teamRef = doc(firestore, 'events', eventId, 'teams', teamId);
-    
+
     const batch = writeBatch(firestore);
     batch.update(cohortRef, { teamIds: arrayRemove(teamId) });
     batch.update(teamRef, { cohortId: null });
     await batch.commit();
+}
+
+export async function updateCohortModerator(firestore: Firestore, { cohortId, moderatorId }: { cohortId: string, moderatorId: string }) {
+    const cohortRef = doc(firestore, 'cohorts', cohortId);
+    const { updateDoc } = await import('firebase/firestore');
+    await updateDoc(cohortRef, { moderatorId });
 }
 
 export async function adjustTeamCreditScore(firestore: Firestore, payload: {
@@ -616,11 +622,11 @@ export async function adjustTeamCreditScore(firestore: Firestore, payload: {
     await runTransaction(firestore, async (transaction) => {
         const teamDoc = await transaction.get(teamRef);
         if (!teamDoc.exists()) throw new Error("Team not found.");
-        
+
         const teamData = teamDoc.data() as Team;
         // Apply the change
         const newCreditScore = (teamData.creditScore || 0) + amount;
-        
+
         const timestamp = new Date().toISOString();
 
         transaction.update(teamRef, { creditScore: newCreditScore });
@@ -640,7 +646,7 @@ export async function adjustTeamCreditScore(firestore: Firestore, payload: {
             balanceAfterTransaction: teamData.balance, // Balance doesn't change
         };
         transaction.set(transactionRef, newTransaction);
-        
+
         const changeType = amount >= 0 ? 'increased' : 'decreased';
         const newNotification: Notification = {
             id: notificationRef.id,

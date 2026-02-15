@@ -79,7 +79,7 @@ export function SidebarNav({ items }: SidebarNavProps) {
         const isActive = item.isActive ?? (
           itemHash
             ? pathname === itemPath && hash === `#${itemHash}`
-            : pathname === item.href
+            : pathname === itemPath && (!hash || hash === '')
         );
         return (
           <SidebarMenuItem key={item.href}>

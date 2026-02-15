@@ -6,6 +6,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
+  SidebarRail,
 } from '@/components/ui/sidebar';
 import { Header } from '@/components/layout/header';
 import { SidebarNav, type NavItem } from '@/components/layout/sidebar-nav';
@@ -31,6 +32,7 @@ export function AppShell({ children, navItems, title }: AppShellProps) {
         <SidebarFooter>
           {/* Can add footer content here */}
         </SidebarFooter>
+        <SidebarRail />
       </Sidebar>
       <SidebarInset>
         <Header title={title} />

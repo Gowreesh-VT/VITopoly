@@ -26,12 +26,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format, formatDistanceToNow, isWithinInterval } from 'date-fns';
-import { ScanLine, HandCoins, Check, X, ArrowRight, Group, Trophy } from 'lucide-react';
+import { ScanLine, HandCoins, Check, X, ArrowRight, Group, Trophy, Activity } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { QrScannerDialog } from '@/components/dashboard/qr-scanner-dialog';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase, approvePaymentRequest, rejectPaymentRequest } from '@/firebase';
 import { doc, collection, collectionGroup, query, where, orderBy, limit } from 'firebase/firestore';
-import type { Team, Transaction, PaymentRequest, Loan, TransactionType, Cohort, Leaderboard } from '@/lib/types';
+import type { Team, Transaction, PaymentRequest, Loan, TransactionType, Cohort, Leaderboard, Property } from '@/lib/types';
 import { TRANSACTION_TYPES } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +40,11 @@ import { ModeratorGameConsole } from '@/components/dashboard/moderator-game-cons
 import { AdminTransactionDialog } from '@/components/dashboard/admin-transaction-dialog';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
+import { AssignPropertyOwnerDialog } from '@/components/dashboard/assign-property-owner-dialog';
+import { AdjustCreditScoreDialog } from '@/components/dashboard/adjust-credit-score-dialog';
+import { formatCurrency } from '@/lib/utils';
+
+
 
 export default function AdminDashboardPage() {
   const { user } = useUser();
@@ -107,6 +112,11 @@ export default function AdminDashboardPage() {
   }, [firestore, eventId, user]);
   const { data: transactions, isLoading: areTransactionsLoading } = useCollection<Transaction>(transactionsQuery);
 
+  const propertiesQuery = useMemoFirebase(() => (
+    eventId ? query(collection(firestore, 'properties'), where('eventId', '==', eventId)) : null
+  ), [firestore, eventId]);
+  const { data: properties, isLoading: arePropertiesLoading } = useCollection<Property>(propertiesQuery);
+
   // Filter all data based on whether the user is a moderator
   const teamsForDisplay = useMemo(() => {
     if (!teams) return [];
@@ -150,6 +160,14 @@ export default function AdminDashboardPage() {
       return typeMatch && teamMatch && dateMatch && cohortMatch;
     });
   }, [transactions, logFilterType, logFilterTeam, logFilterDate, moderatedCohort, teamsForDisplay]);
+
+  const filteredProperties = useMemo(() => {
+    if (!properties) return [];
+    if (moderatedCohort) {
+      return properties.filter(p => p.cohortId === moderatedCohort.id);
+    }
+    return properties;
+  }, [properties, moderatedCohort]);
 
   const handleScan = (scannedData: string | null) => {
     if (scannedData) {
@@ -253,12 +271,13 @@ export default function AdminDashboardPage() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="requests" className="w-full">
-        <TabsList className={`grid w-full ${moderatedCohort ? 'grid-cols-5' : 'grid-cols-4'}`}>
-          <TabsTrigger value="requests">Pending Requests</TabsTrigger>
-          <TabsTrigger value="teams">Team Balances</TabsTrigger>
-          <TabsTrigger value="live-game">Live Game</TabsTrigger>
-          {moderatedCohort && <TabsTrigger value="cohort-leaderboard">Cohort Leaderboard</TabsTrigger>}
-          <TabsTrigger value="log">Transaction Log</TabsTrigger>
+        <TabsList className="w-full flex overflow-x-auto pb-2 mb-4 space-x-2">
+          <TabsTrigger value="requests">Requests</TabsTrigger>
+          <TabsTrigger value="teams">Teams</TabsTrigger>
+          <TabsTrigger value="live-game">Game</TabsTrigger>
+          {moderatedCohort && <TabsTrigger value="cohort-leaderboard">Leaderboard</TabsTrigger>}
+          <TabsTrigger value="log">Log</TabsTrigger>
+          <TabsTrigger value="properties">Properties</TabsTrigger>
         </TabsList>
         <TabsContent value="requests">
           <Card>
@@ -272,7 +291,7 @@ export default function AdminDashboardPage() {
                   <TableRow>
                     <TableHead>Request</TableHead>
                     <TableHead>Amount</TableHead>
-                    <TableHead>Time</TableHead>
+                    <TableHead className="hidden md:table-cell">Time</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -289,7 +308,7 @@ export default function AdminDashboardPage() {
                         <div className="text-sm text-muted-foreground">{req.reason}</div>
                       </TableCell>
                       <TableCell>${req.amount.toLocaleString()}</TableCell>
-                      <TableCell>{formatDistanceToNow(new Date(req.timestamp), { addSuffix: true })}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatDistanceToNow(new Date(req.timestamp), { addSuffix: true })}</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button variant="ghost" size="icon" onClick={() => handleApprove(req)}><Check className="h-4 w-4 text-green-600" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => handleReject(req)}><X className="h-4 w-4 text-destructive" /></Button>
@@ -302,7 +321,7 @@ export default function AdminDashboardPage() {
           </Card>
         </TabsContent>
         <TabsContent value="live-game">
-            <ModeratorGameConsole />
+            <ModeratorGameConsole initialCohort={moderatedCohort} />
         </TabsContent>
         <TabsContent value="teams">
           <Card>
@@ -317,23 +336,29 @@ export default function AdminDashboardPage() {
                     <TableHead>Team</TableHead>
                     <TableHead>Balance</TableHead>
                     <TableHead>Credit Score</TableHead>
-                    <TableHead>Loan Status</TableHead>
+                    <TableHead className="hidden md:table-cell">Loan Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {teamsForDisplay?.length === 0 && <TableRow><TableCell colSpan={4} className="text-center">No teams found.</TableCell></TableRow>}
+                  {teamsForDisplay?.length === 0 && <TableRow><TableCell colSpan={5} className="text-center">No teams found.</TableCell></TableRow>}
                   {teamsForDisplay?.map((team) => {
                     return (
                       <TableRow key={team.id}>
                         <TableCell className="font-medium">{team.name}</TableCell>
                         <TableCell>${team.balance.toLocaleString()}</TableCell>
                         <TableCell>{team.creditScore}</TableCell>
-                        <TableCell>
+						<TableCell className="hidden md:table-cell">
                           {team.hasActiveLoan ? (
                             <Badge variant="destructive">ACTIVE</Badge>
                           ) : (
                             <Badge variant="secondary">None</Badge>
                           )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <AdjustCreditScoreDialog team={team} adminId={user!.uid} eventId={eventId!}>
+                                <Button variant="ghost" size="sm"><Activity className="w-4 h-4 mr-2"/> Adjust</Button>
+                            </AdjustCreditScoreDialog>
                         </TableCell>
                       </TableRow>
                     )
@@ -369,7 +394,7 @@ export default function AdminDashboardPage() {
             </Card>
            </TabsContent>
         )}
-         <TabsContent value="log">
+        <TabsContent value="log">
           <Card>
             <CardHeader>
                <div>
@@ -410,9 +435,9 @@ export default function AdminDashboardPage() {
               <Table>
                  <TableHeader>
                   <TableRow>
-                    <TableHead>Type</TableHead>
+                    <TableHead className="hidden md:table-cell">Type</TableHead>
                     <TableHead>Details</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead className="hidden md:table-cell">Date</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -420,7 +445,7 @@ export default function AdminDashboardPage() {
                   {filteredTransactions.length === 0 && <TableRow><TableCell colSpan={4} className="text-center">No transactions found for the selected filters.</TableCell></TableRow>}
                   {filteredTransactions.map((tx) => (
                     <TableRow key={tx.id}>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <Badge variant="secondary" className="capitalize">{tx.type.replace(/_/g, ' ').toLowerCase()}</Badge>
                       </TableCell>
                       <TableCell>
@@ -429,7 +454,7 @@ export default function AdminDashboardPage() {
                           {tx.fromTeamName ?? 'Bank'} → {tx.toTeamName ?? 'Bank'}
                          </div>
                       </TableCell>
-                      <TableCell>{format(new Date(tx.timestamp), 'PPpp')}</TableCell>
+                      <TableCell className="hidden md:table-cell">{format(new Date(tx.timestamp), 'PPpp')}</TableCell>
                       <TableCell className="text-right font-medium">
                         ${tx.amount.toLocaleString()}
                       </TableCell>
@@ -439,6 +464,52 @@ export default function AdminDashboardPage() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="properties">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Cohort Properties</CardTitle>
+                    <CardDescription>View and manage property ownership for your cohort.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Property</TableHead>
+                                <TableHead>Value</TableHead>
+                                <TableHead>Owner</TableHead>
+                                <TableHead className="hidden md:table-cell">Current State</TableHead>
+                                <TableHead className="hidden md:table-cell">Status</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredProperties?.length === 0 && <TableRow><TableCell colSpan={6} className="text-center">No properties found.</TableCell></TableRow>}
+                            {filteredProperties?.map((prop) => (
+                                <TableRow key={prop.id}>
+                                    <TableCell className="font-medium">{prop.name}</TableCell>
+                                    <TableCell>{formatCurrency(prop.baseValue)}</TableCell>
+                                    <TableCell>{prop.ownerTeamName ?? '-'}</TableCell>
+                                    <TableCell className="hidden md:table-cell">
+                                        {prop.upgradeLevel === 'HOUSE' && <Badge className="bg-blue-500">House</Badge>}
+                                        {prop.upgradeLevel === 'HOTEL' && <Badge className="bg-red-500">Hotel</Badge>}
+                                        {(!prop.upgradeLevel || prop.upgradeLevel === 'NONE') && <Badge variant="outline">Site Only</Badge>}
+                                    </TableCell>
+                                    <TableCell className="hidden md:table-cell">
+                                        <Badge variant={prop.status === 'OWNED' ? 'default' : 'secondary'}>{prop.status}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <AssignPropertyOwnerDialog property={prop} teams={teamsForDisplay ?? []}>
+                                            <Button size="sm" variant="outline">Manage</Button>
+                                        </AssignPropertyOwnerDialog>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
         </TabsContent>
       </Tabs>
     </div>

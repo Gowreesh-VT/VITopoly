@@ -13,25 +13,52 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, addTeamToCohort, removeTeamFromCohort } from '@/firebase';
-import type { Cohort, Team } from '@/lib/types';
+import { useFirestore, addTeamToCohort, removeTeamFromCohort, updateCohortModerator } from '@/firebase';
+import type { Cohort, Team, Admin, UserProfile } from '@/lib/types';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { PlusCircle, XCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 type ManageCohortTeamsDialogProps = {
   children: ReactNode;
   cohort: Cohort;
   allTeams: Team[];
+  admins: Admin[];
+  users: UserProfile[];
 };
 
-export function ManageCohortTeamsDialog({ children, cohort, allTeams }: ManageCohortTeamsDialogProps) {
+export function ManageCohortTeamsDialog({ children, cohort, allTeams, admins, users }: ManageCohortTeamsDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
 
   const teamsInCohort = useMemo(() => allTeams.filter(t => cohort.teamIds.includes(t.id)), [allTeams, cohort]);
-  const availableTeams = useMemo(() => allTeams.filter(t => t.eventId === cohort.eventId && !cohort.teamIds.includes(t.id)), [allTeams, cohort]);
+  const availableTeams = useMemo(() => allTeams.filter(t =>
+    t.eventId === cohort.eventId &&
+    !cohort.teamIds.includes(t.id) &&
+    !t.cohortId // Only show unassigned teams
+  ), [allTeams, cohort]);
+
+  // Build a combined list of admins/users for the moderator dropdown
+  const moderatorOptions = useMemo(() => {
+    const options: { id: string; name: string }[] = [];
+    admins.forEach(a => options.push({ id: a.id, name: a.name }));
+    users.forEach(u => {
+      // Only include users who are ADMIN or SUPER_ADMIN and not already in the list
+      if ((u.role === 'ADMIN' || u.role === 'SUPER_ADMIN') && !options.find(o => o.id === u.id)) {
+        options.push({ id: u.id, name: u.displayName });
+      }
+    });
+    return options;
+  }, [admins, users]);
 
   const handleAddTeam = async (teamId: string) => {
     try {
@@ -51,6 +78,16 @@ export function ManageCohortTeamsDialog({ children, cohort, allTeams }: ManageCo
     }
   };
 
+  const handleModeratorChange = async (newModeratorId: string) => {
+    try {
+      await updateCohortModerator(firestore, { cohortId: cohort.id, moderatorId: newModeratorId });
+      const modName = moderatorOptions.find(o => o.id === newModeratorId)?.name ?? 'Unknown';
+      toast({ title: 'Moderator Updated', description: `Moderator changed to ${modName}.` });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -59,11 +96,29 @@ export function ManageCohortTeamsDialog({ children, cohort, allTeams }: ManageCo
       </DialogTrigger>
       <DialogContent className="sm:max-w-4xl grid-rows-[auto,1fr,auto]">
         <DialogHeader>
-          <DialogTitle>Manage Teams for {cohort.name}</DialogTitle>
+          <DialogTitle>Manage {cohort.name}</DialogTitle>
           <DialogDescription>
-            Add or remove teams from this cohort.
+            Change moderator, add or remove teams from this cohort.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Moderator Section */}
+        <div className="flex items-center gap-4 pb-4 border-b">
+          <Label className="text-sm font-semibold whitespace-nowrap">Moderator:</Label>
+          <Select defaultValue={cohort.moderatorId} onValueChange={handleModeratorChange}>
+            <SelectTrigger className="w-[280px]">
+              <SelectValue placeholder="Select a moderator" />
+            </SelectTrigger>
+            <SelectContent>
+              {moderatorOptions.map(option => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="grid grid-cols-2 gap-6 -mx-6 px-6 border-y -my-6 py-6">
             <div className='flex flex-col gap-2'>
                 <h3 className='font-semibold'>Teams in Cohort ({teamsInCohort.length})</h3>

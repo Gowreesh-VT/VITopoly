@@ -32,40 +32,54 @@ export function PropertiesTab({ properties, events, cohorts, teams }: Properties
         </CreatePropertyDialog>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Property</TableHead>
-              <TableHead>Event</TableHead>
-              <TableHead>Cohort</TableHead>
-              <TableHead>Value</TableHead>
-              <TableHead>Rent</TableHead>
-              <TableHead>Owner</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {properties.map((prop) => (
-              <TableRow key={prop.id}>
-                <TableCell className="font-medium">{prop.name}</TableCell>
-                <TableCell>{events.find((e) => e.id === prop.eventId)?.name}</TableCell>
-                <TableCell>{cohorts.find((c) => c.id === prop.cohortId)?.name}</TableCell>
-                <TableCell>{formatCurrency(prop.baseValue)}</TableCell>
-                <TableCell>{formatCurrency(prop.rentValue)}</TableCell>
-                <TableCell>{prop.ownerTeamName ?? '-'}</TableCell>
-                <TableCell>
-                  <Badge variant={prop.status === 'OWNED' ? 'default' : 'secondary'}>{prop.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <AssignPropertyOwnerDialog property={prop} teams={teams}>
-                    <Button size="sm">Manage</Button>
-                  </AssignPropertyOwnerDialog>
-                </TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Property</TableHead>
+                <TableHead>Cohort</TableHead>
+                <TableHead>Value</TableHead>
+                <TableHead>House Value</TableHead>
+                <TableHead>Hotel Value</TableHead>
+                <TableHead>Place Rent</TableHead>
+                <TableHead>House Rent</TableHead>
+                <TableHead>Hotel Rent</TableHead>
+                <TableHead>Owner</TableHead>
+                <TableHead>Current State</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {properties.map((prop) => (
+                <TableRow key={prop.id}>
+                  <TableCell className="font-medium">{prop.name}</TableCell>
+                  <TableCell>{cohorts.find((c) => c.id === prop.cohortId)?.name}</TableCell>
+                  <TableCell>{formatCurrency(prop.baseValue)}</TableCell>
+                  <TableCell>{formatCurrency(prop.houseValue ?? 0)}</TableCell>
+                  <TableCell>{formatCurrency(prop.hotelValue ?? 0)}</TableCell>
+                  <TableCell>{formatCurrency(prop.placeRent ?? 0)}</TableCell>
+                  <TableCell>{formatCurrency(prop.houseRent ?? 0)}</TableCell>
+                  <TableCell>{formatCurrency(prop.hotelRent ?? 0)}</TableCell>
+                  <TableCell>{prop.ownerTeamName ?? '-'}</TableCell>
+                  <TableCell>
+                    {prop.upgradeLevel === 'HOUSE' && <Badge className="bg-blue-500">House</Badge>}
+                    {prop.upgradeLevel === 'HOTEL' && <Badge className="bg-red-500">Hotel</Badge>}
+                    {(!prop.upgradeLevel || prop.upgradeLevel === 'NONE') && <Badge variant="outline">Site Only</Badge>}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={prop.status === 'OWNED' ? 'default' : 'secondary'}>{prop.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <AssignPropertyOwnerDialog property={prop} teams={teams}>
+                      <Button size="sm">Manage</Button>
+                    </AssignPropertyOwnerDialog>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

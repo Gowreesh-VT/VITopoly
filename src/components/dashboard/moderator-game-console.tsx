@@ -30,6 +30,7 @@ import {
     executePropertyPurchase, 
     executeRentPayment, 
     executePassGo,
+    executePropertyUpgrade,
     LandOnPropertyResult 
 } from '@/lib/game-logic';
 import type { Cohort, Team, Property, Transaction } from '@/lib/types';
@@ -38,14 +39,18 @@ import { Input } from '@/components/ui/input'; // For manual adjust maybe?
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DefaultTeamDialog } from './default-team-dialog';
 
-export function ModeratorGameConsole() {
+export type ModeratorGameConsoleProps = {
+    initialCohort?: Cohort;
+}
+
+export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProps) {
     const firestore = useFirestore();
     const { user } = useUser();
     const { toast } = useToast();
 
     // Data State
     const [cohorts, setCohorts] = useState<Cohort[]>([]);
-    const [selectedCohortId, setSelectedCohortId] = useState<string>('');
+    const [selectedCohortId, setSelectedCohortId] = useState<string>(initialCohort?.id || '');
     const [teams, setTeams] = useState<Team[]>([]);
     const [properties, setProperties] = useState<Property[]>([]);
     
@@ -58,6 +63,12 @@ export function ModeratorGameConsole() {
 
     // 1. Fetch Cohorts on Load
     useEffect(() => {
+        if (initialCohort) {
+            setCohorts([initialCohort]);
+            setSelectedCohortId(initialCohort.id);
+            return;
+        }
+
         const fetchCohorts = async () => {
             // Fetch all for now. Ideally filter by eventId.
             const q = query(collection(firestore, 'cohorts')); 
@@ -65,7 +76,7 @@ export function ModeratorGameConsole() {
             setCohorts(snap.docs.map(d => d.data() as Cohort));
         };
         fetchCohorts();
-    }, [firestore]);
+    }, [firestore, initialCohort]);
 
     // 2. Subscribe to Cohort Data (Teams, Properties)
     useEffect(() => {
@@ -120,44 +131,71 @@ export function ModeratorGameConsole() {
     };
 
     const handleConfirmBuy = async () => {
-        if (!user || !selectedTeamId || !selectedPropertyId) return;
-        setActionState('PROCESSING');
+        if (!selectedTeam || !selectedPropertyId || !user) return;
+        
         try {
-            await executePropertyPurchase(firestore, selectedTeamId, selectedPropertyId, user.uid);
-            toast({ title: 'Success', description: 'Property purchased!' });
-            resetAction();
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Buy Failed', description: error.message });
-            setActionState('DECISION'); // Go back to decision
+            setActionState('PROCESSING');
+            await executePropertyPurchase(firestore, selectedTeam.id, selectedPropertyId, user.uid, selectedTeam.eventId);
+            toast({ title: 'Success', description: `Purchased!` });
+            
+            // Refund state
+            setSelectedTeamId('');
+            setSelectedPropertyId('');
+            setDecisionResult(null);
+            setActionState('IDLE');
+        } catch (e: any) {
+            console.error(e);
+            toast({ title: 'Buy Failed', description: e.message, variant: 'destructive' });
+            setActionState('IDLE'); // Reset on failure too
         }
     };
 
     const handleConfirmRent = async () => {
-        if (!user || !selectedTeamId || !selectedPropertyId) return;
-        setActionState('PROCESSING');
-        try {
-            await executeRentPayment(firestore, selectedTeamId, selectedPropertyId, user.uid);
-            toast({ title: 'Success', description: 'Rent paid successfully.' });
-            resetAction();
-        } catch (error: any) {
-            if (error.message === 'INSUFFICIENT_FUNDS') {
-                 toast({ variant: 'destructive', title: 'Default Warning', description: 'Team has insufficient funds!' });
-                 // Here we could trigger a specific UI for Default
-            } else {
-                 toast({ variant: 'destructive', title: 'Rent Failed', description: error.message });
-            }
-            setActionState('DECISION');
+         if (!selectedTeam || !selectedPropertyId || !user) return;
+         try {
+            setActionState('PROCESSING');
+            await executeRentPayment(firestore, selectedTeam.id, selectedPropertyId, user.uid, selectedTeam.eventId);
+            toast({ title: 'Success', description: `Rent Paid!` });
+             
+            // Refund state
+            setSelectedTeamId('');
+            setSelectedPropertyId('');
+            setDecisionResult(null);
+             setActionState('IDLE');
+        } catch (e: any) {
+            console.error(e);
+            toast({ title: 'Rent Payment Failed', description: e.message, variant: 'destructive' });
+             setActionState('IDLE');
+        }
+    };
+
+    const handleConfirmUpgrade = async (targetLevel: 'HOUSE' | 'HOTEL') => {
+         if (!selectedTeam || !selectedPropertyId || !user) return;
+         try {
+            setActionState('PROCESSING');
+            await executePropertyUpgrade(firestore, selectedTeam.id, selectedPropertyId, targetLevel, user.uid, selectedTeam.eventId);
+            toast({ title: 'Success', description: `Upgraded to ${targetLevel}!` });
+             
+            // Refund state
+            setSelectedTeamId('');
+            setSelectedPropertyId('');
+            setDecisionResult(null);
+             setActionState('IDLE');
+        } catch (e: any) {
+            console.error(e);
+            toast({ title: 'Upgrade Failed', description: e.message, variant: 'destructive' });
+             setActionState('IDLE');
         }
     };
 
     const handlePassGo = async () => {
-        if (!user || !selectedTeamId) return;
-        if (!confirm('Confirm Pass Go (+$2000)?')) return;
+        if (!selectedTeam || !user) return;
         try {
-            await executePassGo(firestore, selectedTeamId, user.uid);
-            toast({ title: 'Success', description: 'Salary added.' });
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Failed', description: error.message });
+             await executePassGo(firestore, selectedTeamId, user.uid, selectedTeam.eventId);
+             toast({ title: 'Success', description: 'Salary Paid!' });
+        } catch (e: any) {
+             console.error(e);
+             toast({ title: 'Error', description: e.message, variant: 'destructive' });
         }
     };
 
@@ -178,16 +216,22 @@ export function ModeratorGameConsole() {
                 </CardHeader>
                 <CardContent>
                     <div className="flex gap-4 items-center mb-6">
-                        <Select value={selectedCohortId} onValueChange={setSelectedCohortId}>
-                            <SelectTrigger className="w-[200px]">
-                                <SelectValue placeholder="Select Cohort" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {cohorts.map(c => (
-                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        {initialCohort ? (
+                             <Badge variant="outline" className="text-lg px-4 py-1">
+                                Cohort: {initialCohort.name}
+                             </Badge>
+                        ) : (
+                            <Select value={selectedCohortId} onValueChange={setSelectedCohortId}>
+                                <SelectTrigger className="w-[200px]">
+                                    <SelectValue placeholder="Select Cohort" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {cohorts.map(c => (
+                                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
                         {selectedCohortId && selectedTeamId && (
                             <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-md">
                                 <span className="text-sm font-medium text-muted-foreground">Active Team:</span>
@@ -285,8 +329,35 @@ export function ModeratorGameConsole() {
                                                     {decisionResult.status === 'OWNED_BY_SELF' && (
                                                         <div className="text-center py-4">
                                                             <CheckCircle2 className="w-8 h-8 mx-auto text-green-500 mb-2" />
-                                                            <p>You own this property.</p>
-                                                            <Button variant="outline" className="mt-2" onClick={resetAction}>Close</Button>
+                                                            <p className="font-semibold mb-2">You own this property.</p>
+                                                            
+                                                            <div className="flex flex-col gap-2 mt-4">
+                                                                {(!decisionResult.property.upgradeLevel || decisionResult.property.upgradeLevel === 'NONE') && decisionResult.property.houseValue && (
+                                                                    <Button 
+                                                                        onClick={() => handleConfirmUpgrade('HOUSE')}
+                                                                        disabled={selectedTeam!.balance < (decisionResult.property.houseValue || 0)}
+                                                                        className="w-full"
+                                                                    >
+                                                                        Build House (${decisionResult.property.houseValue.toLocaleString()})
+                                                                    </Button>
+                                                                )}
+
+                                                                {decisionResult.property.upgradeLevel === 'HOUSE' && decisionResult.property.hotelValue && (
+                                                                     <Button 
+                                                                        onClick={() => handleConfirmUpgrade('HOTEL')}
+                                                                        disabled={selectedTeam!.balance < (decisionResult.property.hotelValue || 0)}
+                                                                        className="w-full"
+                                                                    >
+                                                                        Build Hotel (${decisionResult.property.hotelValue.toLocaleString()})
+                                                                    </Button>
+                                                                )}
+
+                                                                {decisionResult.property.upgradeLevel === 'HOTEL' && (
+                                                                    <Badge variant="outline" className="mx-auto block w-fit">Max Upgrade Reached</Badge>
+                                                                )}
+                                                            </div>
+
+                                                            <Button variant="outline" className="mt-4 w-full" onClick={resetAction}>Close</Button>
                                                         </div>
                                                     )}
                                                 </CardContent>

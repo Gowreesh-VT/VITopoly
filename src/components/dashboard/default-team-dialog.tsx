@@ -43,10 +43,10 @@ export function DefaultTeamDialog({ team, adminId, onSuccess, trigger }: Default
     setLoading(true);
     try {
       // 1. Execute Default (Logs & Status Update)
-      await executeTeamDefault(firestore, team.id, adminId, reason || 'Manual Default by Admin');
+      await executeTeamDefault(firestore, team.id, adminId, reason || 'Manual Default by Admin', team.eventId);
       
       // 2. Seize Assets (Convert to Tokens) - This handles the property conversion
-      const seizedCount = await seizeTeamAssets(firestore, team.id, adminId);
+      const seizedCount = await seizeTeamAssets(firestore, team.id, adminId, team.eventId);
 
       toast({
         title: 'Team Defaulted',

@@ -104,7 +104,7 @@ service cloud.firestore {
     match /properties/{propertyId} {
       allow read:   if isSignedIn();
       allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin(); // Moderators might need update? No, they use Cloud Functions or specific endpoints usually. But here we do client-side.
+      allow update: if isSuperAdmin() || isAdminOrAbove(resource.data.eventId);
       allow delete: if isSuperAdmin();
     }
 

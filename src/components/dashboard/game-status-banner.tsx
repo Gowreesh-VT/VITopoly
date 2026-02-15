@@ -26,7 +26,7 @@ export function GameStatusBanner() {
     }
 
     if (!gameConfig) {
-        return null; // Don't show the banner if the game state isn't initialized
+        return null;
     }
     
     const getStatusVariant = (status: string) => {

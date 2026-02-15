@@ -167,9 +167,15 @@ export type Property = {
   cohortId: string;
   baseValue: number;
   rentValue: number;
+  houseValue?: number;
+  hotelValue?: number;
+  houseRent?: number;
+  hotelRent?: number;
+  placeRent?: number;
   ownerTeamId?: string | null;
   ownerTeamName?: string | null;
   status: 'UNOWNED' | 'OWNED' | 'SEIZED' | 'AUCTION';
+  upgradeLevel?: 'NONE' | 'HOUSE' | 'HOTEL';
 }
 
 export type Token = {
