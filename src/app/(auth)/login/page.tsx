@@ -82,7 +82,6 @@ export default function LoginPage() {
                 router.push('/team/dashboard'); // Default redirect
             }
           } else {
-            // User profile doesn't exist, so we create it.
             console.log("User profile not found in Firestore. Creating a new one.");
             const newUserProfile: Omit<UserProfile, 'teamId' | 'eventId'> = {
                 id: user.uid,
@@ -95,7 +94,6 @@ export default function LoginPage() {
                 title: "Welcome!",
                 description: "Your user profile has been created. An admin will assign you to a team.",
             });
-            // Redirect new users to the team dashboard, which will show an empty/pending state.
             router.push('/team/dashboard');
           }
         } catch (error) {
