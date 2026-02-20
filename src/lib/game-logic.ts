@@ -693,3 +693,64 @@ export async function calculateLeaderboard(
         }
     });
 }
+
+export async function executeRenameTeam(
+    firestore: Firestore,
+    teamId: string,
+    newName: string,
+    eventId: string
+) {
+    const batch = writeBatch(firestore);
+    const teamRef = doc(firestore, 'events', eventId, 'teams', teamId);
+    const teamSnap = await getDoc(teamRef);
+    if (!teamSnap.exists()) throw new Error("Team not found");
+    const oldName = (teamSnap.data() as Team).name;
+
+    // 1. Update Team Document
+    batch.update(teamRef, { name: newName });
+
+    // 2. Update properties owned by the team
+    const ownedPropsQuery = query(collection(firestore, 'properties'), where('ownerTeamId', '==', teamId));
+    const ownedPropsSnap = await getDocs(ownedPropsQuery);
+    ownedPropsSnap.docs.forEach(propDoc => {
+        batch.update(propDoc.ref, { ownerTeamName: newName });
+    });
+
+    // 3. Update properties previously owned by the team (Seized)
+    const seizedPropsQuery = query(collection(firestore, 'properties'), where('previousOwnerName', '==', oldName));
+    const seizedPropsSnap = await getDocs(seizedPropsQuery);
+    seizedPropsSnap.docs.forEach(propDoc => {
+        batch.update(propDoc.ref, { previousOwnerName: newName });
+    });
+
+    // 4. Update Leaderboards
+    // Fetch all leaderboards related to this event
+    const leaderboardsQuery = query(collection(firestore, 'leaderboards'), where('eventId', '==', eventId));
+    const leaderboardsSnap = await getDocs(leaderboardsQuery);
+    leaderboardsSnap.docs.forEach(lbDoc => {
+        const lbData = lbDoc.data();
+        let changed = false;
+
+        const updateRankings = (rankings: any[]) => {
+            return rankings.map(r => {
+                if (r.teamId === teamId) {
+                    changed = true;
+                    return { ...r, teamName: newName };
+                }
+                return r;
+            });
+        };
+
+        const newRankings = lbData.rankings ? updateRankings(lbData.rankings) : null;
+        const newOverallRankings = lbData.overallRankings ? updateRankings(lbData.overallRankings) : null;
+
+        if (changed) {
+            batch.update(lbDoc.ref, {
+                ...(newRankings && { rankings: newRankings }),
+                ...(newOverallRankings && { overallRankings: newOverallRankings })
+            });
+        }
+    });
+
+    await batch.commit();
+}

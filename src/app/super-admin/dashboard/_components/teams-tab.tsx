@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { updateDocumentNonBlocking } from '@/firebase';
+import { executeRenameTeam } from '@/lib/game-logic';
 import { AdjustBalanceDialog } from '@/components/dashboard/adjust-balance-dialog';
 import { CreditScoreOverrideDialog } from '@/components/dashboard/credit-score-override-dialog';
 import { CreateTeamDialog } from '@/components/dashboard/create-team-dialog';
@@ -87,7 +88,6 @@ export function TeamsTab({ firestore, userId, teams, events, loans, cohorts }: T
 
   const handleEditTeamName = async (team: Team, newName: string) => {
     if (!newName.trim() || newName === team.name) return;
-    const teamRef = doc(firestore, 'events', team.eventId, 'teams', team.id);
     
     // Check if another team has this name
     const nameExists = teams.some(t => t.name.toLowerCase() === newName.trim().toLowerCase() && t.id !== team.id);
@@ -96,8 +96,13 @@ export function TeamsTab({ firestore, userId, teams, events, loans, cohorts }: T
         return;
     }
     
-    updateDocumentNonBlocking(teamRef, { name: newName.trim() });
-    toast({ title: 'Team Renamed', description: `Team successfully renamed to ${newName.trim()}.` });
+    try {
+        await executeRenameTeam(firestore, team.id, newName.trim(), team.eventId);
+        toast({ title: 'Team Renamed', description: `Team successfully renamed to ${newName.trim()}.` });
+    } catch (error: any) {
+        console.error("Renaming error:", error);
+        toast({ title: 'Error', description: error.message || 'Failed to rename team.', variant: 'destructive' });
+    }
   };
 
   const filteredTeams = teams.filter(team =>
