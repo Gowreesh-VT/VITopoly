@@ -21,11 +21,15 @@ type ForceCloseLoanDialogProps = {
   team: Team;
   loan: Loan;
   adminId: string;
-  children: ReactNode;
+  children?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function ForceCloseLoanDialog({ team, loan, adminId, children }: ForceCloseLoanDialogProps) {
-  const [open, setOpen] = useState(false);
+export function ForceCloseLoanDialog({ team, loan, adminId, children, open: controlledOpen, onOpenChange }: ForceCloseLoanDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange !== undefined ? onOpenChange : setInternalOpen;
   const { toast } = useToast();
   const firestore = useFirestore();
 

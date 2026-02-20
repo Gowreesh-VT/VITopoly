@@ -60,6 +60,11 @@ export function TeamsTab({ firestore, userId, teams, events, loans, cohorts }: T
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingTeam, setDeletingTeam] = useState<Team | null>(null);
+  const [renamingTeam, setRenamingTeam] = useState<Team | null>(null);
+  const [adjustingBalanceTeam, setAdjustingBalanceTeam] = useState<Team | null>(null);
+  const [overridingScoreTeam, setOverridingScoreTeam] = useState<Team | null>(null);
+  const [statusTogglingTeam, setStatusTogglingTeam] = useState<Team | null>(null);
+  const [forceClosingLoan, setForceClosingLoan] = useState<{ team: Team, loan: Loan } | null>(null);
 
   const handleDeleteTeam = async (teamId: string, eventId: string) => {
     try {
@@ -84,6 +89,7 @@ export function TeamsTab({ firestore, userId, teams, events, loans, cohorts }: T
     const newStatus = team.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
     updateDocumentNonBlocking(teamRef, { status: newStatus });
     toast({ title: 'Team Status Updated', description: `${team.name} has been ${newStatus.toLowerCase()}.` });
+    setStatusTogglingTeam(null);
   };
 
   const handleEditTeamName = async (team: Team, newName: string) => {
@@ -99,6 +105,7 @@ export function TeamsTab({ firestore, userId, teams, events, loans, cohorts }: T
     try {
         await executeRenameTeam(firestore, team.id, newName.trim(), team.eventId);
         toast({ title: 'Team Renamed', description: `Team successfully renamed to ${newName.trim()}.` });
+        setRenamingTeam(null);
     } catch (error: any) {
         console.error("Renaming error:", error);
         toast({ title: 'Error', description: error.message || 'Failed to rename team.', variant: 'destructive' });
@@ -230,26 +237,20 @@ export function TeamsTab({ firestore, userId, teams, events, loans, cohorts }: T
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               
-                              <RenameTeamDialog team={team} onRename={(newName) => handleEditTeamName(team, newName)}>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                  <Pencil className="mr-2 h-4 w-4" /> Rename Team
-                                </DropdownMenuItem>
-                              </RenameTeamDialog>
+                              <DropdownMenuItem onSelect={() => setRenamingTeam(team)}>
+                                <Pencil className="mr-2 h-4 w-4" /> Rename Team
+                              </DropdownMenuItem>
 
-                              <AdjustBalanceDialog team={team} adminId={userId}>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                  <Wallet className="mr-2 h-4 w-4" /> Adjust Balance
-                                </DropdownMenuItem>
-                              </AdjustBalanceDialog>
+                              <DropdownMenuItem onSelect={() => setAdjustingBalanceTeam(team)}>
+                                <Wallet className="mr-2 h-4 w-4" /> Adjust Balance
+                              </DropdownMenuItem>
 
-                              <CreditScoreOverrideDialog team={team}>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                  <Shield className="mr-2 h-4 w-4" /> Override Score
-                                </DropdownMenuItem>
-                              </CreditScoreOverrideDialog>
+                              <DropdownMenuItem onSelect={() => setOverridingScoreTeam(team)}>
+                                <Shield className="mr-2 h-4 w-4" /> Override Score
+                              </DropdownMenuItem>
 
                               <DropdownMenuItem 
-                                onSelect={(e) => { e.preventDefault(); setDeletingTeam(team); }} 
+                                onSelect={() => setDeletingTeam(team)} 
                                 className="text-destructive focus:text-destructive"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" /> Delete Team
@@ -257,48 +258,24 @@ export function TeamsTab({ firestore, userId, teams, events, loans, cohorts }: T
                               
                               <DropdownMenuSeparator />
                               
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem 
-                                    onSelect={(e) => e.preventDefault()} 
-                                    className={team.status === 'ACTIVE' ? "text-destructive focus:text-destructive" : "text-green-600 focus:text-green-600"}
-                                  >
-                                    {team.status === 'ACTIVE' ? (
-                                      <><UserMinus className="mr-2 h-4 w-4" /> Deactivate Team</>
-                                    ) : (
-                                      <><UserRoundPlus className="mr-2 h-4 w-4" /> Activate Team</>
-                                    )}
-                                  </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      {team.status === 'ACTIVE' ? 'Deactivate Team?' : 'Activate Team?'}
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      {team.status === 'ACTIVE' 
-                                        ? `Are you sure you want to deactivate ${team.name}? They will not be able to log in or participate.`
-                                        : `Are you sure you want to activate ${team.name}? They will be able to log in and participate normally.`
-                                      }
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleToggleTeamStatus(team)}>
-                                      Confirm
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                              <DropdownMenuItem 
+                                onSelect={() => setStatusTogglingTeam(team)} 
+                                className={team.status === 'ACTIVE' ? "text-destructive focus:text-destructive" : "text-green-600 focus:text-green-600"}
+                              >
+                                {team.status === 'ACTIVE' ? (
+                                  <><UserMinus className="mr-2 h-4 w-4" /> Deactivate Team</>
+                                ) : (
+                                  <><UserRoundPlus className="mr-2 h-4 w-4" /> Activate Team</>
+                                )}
+                              </DropdownMenuItem>
+
                               {loan && (
-                                <ForceCloseLoanDialog team={team} loan={loan} adminId={userId}>
-                                  <DropdownMenuItem 
-                                    onSelect={(e) => e.preventDefault()} 
-                                    className="text-destructive focus:text-destructive"
-                                  >
-                                    <Wallet className="mr-2 h-4 w-4" /> Force Close Loan
-                                  </DropdownMenuItem>
-                                </ForceCloseLoanDialog>
+                                <DropdownMenuItem 
+                                  onSelect={() => setForceClosingLoan({ team, loan })} 
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Wallet className="mr-2 h-4 w-4" /> Force Close Loan
+                                </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -312,32 +289,49 @@ export function TeamsTab({ firestore, userId, teams, events, loans, cohorts }: T
         </div>
       </CardContent>
 
+      {/* Action Dialogs */}
+      {renamingTeam && (
+        <RenameTeamDialog 
+          team={renamingTeam} 
+          open={!!renamingTeam} 
+          onOpenChange={(open) => !open && setRenamingTeam(null)}
+          onRename={(newName) => handleEditTeamName(renamingTeam, newName)}
+        />
+      )}
+
+      {adjustingBalanceTeam && (
+        <AdjustBalanceDialog 
+          team={adjustingBalanceTeam} 
+          adminId={userId} 
+          open={!!adjustingBalanceTeam} 
+          onOpenChange={(open) => !open && setAdjustingBalanceTeam(null)}
+        />
+      )}
+
+      {overridingScoreTeam && (
+        <CreditScoreOverrideDialog 
+          team={overridingScoreTeam} 
+          open={!!overridingScoreTeam} 
+          onOpenChange={(open) => !open && setOverridingScoreTeam(null)}
+        />
+      )}
+
+      {forceClosingLoan && (
+        <ForceCloseLoanDialog 
+          team={forceClosingLoan.team} 
+          loan={forceClosingLoan.loan} 
+          adminId={userId} 
+          open={!!forceClosingLoan} 
+          onOpenChange={(open) => !open && setForceClosingLoan(null)}
+        />
+      )}
+
       <AlertDialog open={!!deletingTeam} onOpenChange={(open) => !open && setDeletingTeam(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Team</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete the team <strong>{deletingTeam?.name}</strong>? 
-              This action cannot be undone and will remove all their data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => deletingTeam && handleDeleteTeam(deletingTeam.id, deletingTeam.eventId)}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog open={!!deletingTeam} onOpenChange={(open) => !open && setDeletingTeam(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Team</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete the team <strong className="font-semibold text-foreground">{deletingTeam?.name}</strong>? 
               This action cannot be undone and will permanently remove all their data.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -352,12 +346,47 @@ export function TeamsTab({ firestore, userId, teams, events, loans, cohorts }: T
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!statusTogglingTeam} onOpenChange={(open) => !open && setStatusTogglingTeam(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {statusTogglingTeam?.status === 'ACTIVE' ? 'Deactivate Team?' : 'Activate Team?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {statusTogglingTeam?.status === 'ACTIVE' 
+                ? `Are you sure you want to deactivate ${statusTogglingTeam?.name}? They will not be able to log in or participate.`
+                : `Are you sure you want to activate ${statusTogglingTeam?.name}? They will be able to log in and participate normally.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => statusTogglingTeam && handleToggleTeamStatus(statusTogglingTeam)}>
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
 
-function RenameTeamDialog({ team, onRename, children }: { team: Team, onRename: (newName: string) => void, children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+function RenameTeamDialog({ 
+  team, 
+  onRename, 
+  open: controlledOpen, 
+  onOpenChange 
+}: { 
+  team: Team, 
+  onRename: (newName: string) => void, 
+  open?: boolean,
+  onOpenChange?: (open: boolean) => void
+}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange !== undefined ? onOpenChange : setInternalOpen;
+  
   const [newName, setNewName] = useState(team.name);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -368,9 +397,6 @@ function RenameTeamDialog({ team, onRename, children }: { team: Team, onRename: 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Rename Team</DialogTitle>

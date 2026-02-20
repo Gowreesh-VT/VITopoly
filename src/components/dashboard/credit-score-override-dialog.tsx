@@ -35,11 +35,15 @@ const formSchema = z.object({
 
 type CreditScoreOverrideDialogProps = {
   team: Team;
-  children: ReactNode;
+  children?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function CreditScoreOverrideDialog({ team, children }: CreditScoreOverrideDialogProps) {
-  const [open, setOpen] = useState(false);
+export function CreditScoreOverrideDialog({ team, children, open: controlledOpen, onOpenChange }: CreditScoreOverrideDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange !== undefined ? onOpenChange : setInternalOpen;
   const { toast } = useToast();
   const firestore = useFirestore();
 

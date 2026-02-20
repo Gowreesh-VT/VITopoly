@@ -41,11 +41,15 @@ const formSchema = z.object({
 type AdjustBalanceDialogProps = {
   team: Team;
   adminId: string;
-  children: ReactNode;
+  children?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function AdjustBalanceDialog({ team, adminId, children }: AdjustBalanceDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AdjustBalanceDialog({ team, adminId, children, open: controlledOpen, onOpenChange }: AdjustBalanceDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange !== undefined ? onOpenChange : setInternalOpen;
   const { toast } = useToast();
   const firestore = useFirestore();
 
