@@ -266,20 +266,27 @@ export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProp
                             <div className="space-y-4">
                                 <h3 className="font-medium">1. Select Player</h3>
                                 <div className="grid grid-cols-1 gap-2">
-                                    {teams.map(team => (
-                                        <Button 
-                                            key={team.id} 
-                                            variant={selectedTeamId === team.id ? 'default' : 'outline'}
-                                            className="justify-between h-auto py-3"
-                                            onClick={() => { setSelectedTeamId(team.id); resetAction(); }}
-                                        >
-                                            <span className="font-semibold">{team.name}</span>
-                                            <div className="flex flex-col items-end gap-1">
-                                                <span className={team.balance < 0 ? 'text-red-500' : ''}>{GAME_CONFIG.CURRENCY_SYMBOL}{team.balance.toLocaleString()}</span>
-                                                <span className="text-xs text-muted-foreground">Laps: {team.lapsCompleted || 0}</span>
-                                            </div>
-                                        </Button>
-                                    ))}
+                                    {teams
+                                        .filter(team => team.status === 'ACTIVE' && !team.isEliminated)
+                                        .map(team => (
+                                            <Button 
+                                                key={team.id} 
+                                                variant={selectedTeamId === team.id ? 'default' : 'outline'}
+                                                className="justify-between h-auto py-3"
+                                                onClick={() => { setSelectedTeamId(team.id); resetAction(); }}
+                                            >
+                                                <span className="font-semibold">{team.name}</span>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span className={team.balance < 0 ? 'text-red-500' : ''}>{GAME_CONFIG.CURRENCY_SYMBOL}{team.balance.toLocaleString()}</span>
+                                                    <span className="text-xs text-muted-foreground">Laps: {team.lapsCompleted || 0}</span>
+                                                </div>
+                                            </Button>
+                                        ))}
+                                    {teams.filter(team => team.status === 'ACTIVE' && !team.isEliminated).length === 0 && (
+                                        <div className="text-center py-4 text-muted-foreground text-sm border rounded-md border-dashed">
+                                            No active teams in this cohort.
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
