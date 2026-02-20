@@ -52,49 +52,21 @@ export default function AdminPropertiesPage() {
         return properties;
     }, [properties, moderatedCohort]);
 
-    const seizedProperties = useMemo(() => {
-        return filteredProperties.filter(p => p.status === 'SEIZED');
-    }, [filteredProperties]);
-
-    const activeProperties = useMemo(() => {
-        return filteredProperties.filter(p => p.status !== 'SEIZED');
-    }, [filteredProperties]);
-
     if (arePropertiesLoading) return <Skeleton className="h-64 w-full" />;
 
     return (
-        <div className="space-y-6">
-            {seizedProperties.length > 0 && (
-                <Card className="border-destructive/20 bg-destructive/5">
-                    <CardHeader className="pb-3">
-                        <div className="flex items-center gap-2">
-                            <CardTitle className="text-destructive">Seized Assets</CardTitle>
-                            <Badge variant="destructive">{seizedProperties.length}</Badge>
-                        </div>
-                        <CardDescription>These properties have been seized from defaulted teams and are awaiting conversion to tokens or redistribution.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <PropertyTable 
-                            properties={seizedProperties} 
-                            teams={teamsForDisplay} 
-                        />
-                    </CardContent>
-                </Card>
-            )}
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Cohort Properties</CardTitle>
-                    <CardDescription>View and manage property ownership for your cohort.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <PropertyTable 
-                        properties={activeProperties} 
-                        teams={teamsForDisplay} 
-                    />
-                </CardContent>
-            </Card>
-        </div>
+        <Card>
+            <CardHeader>
+                <CardTitle>Cohort Properties</CardTitle>
+                <CardDescription>View and manage property ownership for your cohort.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <PropertyTable 
+                    properties={filteredProperties} 
+                    teams={teamsForDisplay} 
+                />
+            </CardContent>
+        </Card>
     );
 }
 
@@ -118,7 +90,10 @@ function PropertyTable({ properties, teams }: { properties: Property[], teams: T
             <TableBody>
                 {properties.length === 0 && <TableRow><TableCell colSpan={10} className="text-center">No properties found.</TableCell></TableRow>}
                 {properties.map((prop) => (
-                    <TableRow key={prop.id}>
+                    <TableRow 
+                        key={prop.id}
+                        className={prop.status === 'SEIZED' ? 'bg-destructive/10 hover:bg-destructive/20 transition-colors border-l-4 border-l-destructive/50' : ''}
+                    >
                         <TableCell className="font-medium">{prop.name}</TableCell>
                         <TableCell>₹{prop.baseValue?.toLocaleString() ?? '-'}</TableCell>
                         <TableCell>{prop.houseValue ? `₹${prop.houseValue.toLocaleString()}` : '-'}</TableCell>

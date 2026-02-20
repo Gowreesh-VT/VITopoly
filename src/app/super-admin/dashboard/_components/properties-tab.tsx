@@ -23,17 +23,14 @@ interface PropertiesTabProps {
 }
 
 export function PropertiesTab({ properties, events, cohorts, teams }: PropertiesTabProps) {
-  const seizedProperties = properties.filter(p => p.status === 'SEIZED');
-  const activeProperties = properties.filter(p => p.status !== 'SEIZED');
-
-  // Group active properties by cohort
+  // Group properties by cohort
   const propertiesByCohort = cohorts.reduce((acc, cohort) => {
-    acc[cohort.id] = activeProperties.filter(p => p.cohortId === cohort.id);
+    acc[cohort.id] = properties.filter(p => p.cohortId === cohort.id);
     return acc;
   }, {} as Record<string, Property[]>);
 
-  // Catch any active properties without a valid cohort
-  const unassignedProperties = activeProperties.filter(p => !cohorts.some(c => c.id === p.cohortId));
+  // Catch any properties without a valid cohort
+  const unassignedProperties = properties.filter(p => !cohorts.some(c => c.id === p.cohortId));
 
   return (
     <div className="space-y-6">
@@ -55,84 +52,59 @@ export function PropertiesTab({ properties, events, cohorts, teams }: Properties
               No properties found. Create one to get started.
             </div>
           ) : (
-            <div className="space-y-6">
-              {/* Seized Assets Section */}
-              {seizedProperties.length > 0 && (
-                <Card className="border-destructive/20 bg-destructive/5 shadow-none">
-                  <CardHeader className="py-4">
-                    <div className="flex items-center gap-2">
-                       <CardTitle className="text-lg text-destructive">Seized Assets</CardTitle>
-                       <Badge variant="destructive">{seizedProperties.length}</Badge>
-                    </div>
-                    <CardDescription>Global view of all properties seized across all clusters.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="px-2 pb-2">
-                    <div className="rounded-md border bg-background">
-                      <CohortPropertyTable 
-                        properties={seizedProperties} 
-                        teams={teams} 
-                        events={events} 
-                        cohorts={cohorts} 
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+            <Accordion type="multiple" className="w-full space-y-4">
+              {cohorts.map((cohort) => {
+                const cohortProperties = propertiesByCohort[cohort.id] || [];
+                if (cohortProperties.length === 0) return null;
 
-              <Accordion type="multiple" className="w-full space-y-4">
-                {cohorts.map((cohort) => {
-                  const cohortProperties = propertiesByCohort[cohort.id] || [];
-                  if (cohortProperties.length === 0) return null;
-
-                  return (
-                    <AccordionItem key={cohort.id} value={cohort.id} className="border rounded-lg px-4 bg-muted/20">
-                      <AccordionTrigger className="hover:no-underline hover:text-primary transition-colors py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-lg">{cohort.name}</span>
-                          <Badge variant="outline" className="ml-2 bg-background">
-                            {cohortProperties.length} {cohortProperties.length === 1 ? 'Property' : 'Properties'}
-                          </Badge>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="rounded-md border bg-background mt-2">
-                           <CohortPropertyTable 
-                              properties={cohortProperties} 
-                              teams={teams} 
-                              events={events} 
-                              cohorts={cohorts} 
-                           />
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
-
-                {/* Unassigned Properties */}
-                {unassignedProperties.length > 0 && (
-                  <AccordionItem value="unassigned" className="border rounded-lg px-4 bg-muted/20">
-                      <AccordionTrigger className="hover:no-underline text-destructive hover:text-destructive/80 transition-colors py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-lg">Unassigned Properties</span>
-                          <Badge variant="destructive" className="ml-2">
-                            {unassignedProperties.length}
-                          </Badge>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="rounded-md border bg-background mt-2">
-                           <CohortPropertyTable 
-                              properties={unassignedProperties} 
-                              teams={teams} 
-                              events={events} 
-                              cohorts={cohorts} 
-                           />
-                        </div>
-                      </AccordionContent>
+                return (
+                  <AccordionItem key={cohort.id} value={cohort.id} className="border rounded-lg px-4 bg-muted/20">
+                    <AccordionTrigger className="hover:no-underline hover:text-primary transition-colors py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-lg">{cohort.name}</span>
+                        <Badge variant="outline" className="ml-2 bg-background">
+                          {cohortProperties.length} {cohortProperties.length === 1 ? 'Property' : 'Properties'}
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="rounded-md border bg-background mt-2">
+                         <CohortPropertyTable 
+                            properties={cohortProperties} 
+                            teams={teams} 
+                            events={events} 
+                            cohorts={cohorts} 
+                         />
+                      </div>
+                    </AccordionContent>
                   </AccordionItem>
-                )}
-              </Accordion>
-            </div>
+                );
+              })}
+
+              {/* Unassigned Properties */}
+              {unassignedProperties.length > 0 && (
+                <AccordionItem value="unassigned" className="border rounded-lg px-4 bg-muted/20">
+                    <AccordionTrigger className="hover:no-underline text-destructive hover:text-destructive/80 transition-colors py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-lg">Unassigned Properties</span>
+                        <Badge variant="destructive" className="ml-2">
+                          {unassignedProperties.length}
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="rounded-md border bg-background mt-2">
+                         <CohortPropertyTable 
+                            properties={unassignedProperties} 
+                            teams={teams} 
+                            events={events} 
+                            cohorts={cohorts} 
+                         />
+                      </div>
+                    </AccordionContent>
+                </AccordionItem>
+              )}
+            </Accordion>
           )}
         </CardContent>
       </Card>
@@ -160,7 +132,10 @@ function CohortPropertyTable({ properties, teams, events, cohorts }: PropertiesT
       </TableHeader>
       <TableBody>
         {properties.map((prop) => (
-          <TableRow key={prop.id}>
+          <TableRow 
+            key={prop.id}
+            className={prop.status === 'SEIZED' ? 'bg-destructive/10 hover:bg-destructive/20 transition-colors border-l-4 border-l-destructive/50' : ''}
+          >
             <TableCell className="font-medium">{prop.name}</TableCell>
             <TableCell className="text-xs text-muted-foreground">{events.find((e) => e.id === prop.eventId)?.name}</TableCell>
             <TableCell>₹{prop.baseValue?.toLocaleString() ?? '-'}</TableCell>
