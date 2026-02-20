@@ -23,7 +23,7 @@ export function StatCard({ title, value, icon, description, id }: StatCardProps)
         <div className="text-muted-foreground">{icon}</div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-2xl font-bold">{Number.isNaN(value) ? 'N/A' : value}</div>
         {description && <p className="text-xs text-muted-foreground">{description}</p>}
       </CardContent>
     </Card>

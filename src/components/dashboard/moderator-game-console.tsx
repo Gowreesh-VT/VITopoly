@@ -251,6 +251,9 @@ export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProp
                                 <Badge variant={selectedTeam?.balance && selectedTeam.balance < 0 ? 'destructive' : 'default'}>
                                     {GAME_CONFIG.CURRENCY_SYMBOL}{selectedTeam?.balance.toLocaleString() ?? 0}
                                 </Badge>
+                                <Badge variant="outline" className="ml-2 border-primary/50 text-xs">
+                                    Laps: {selectedTeam?.lapsCompleted || 0}
+                                </Badge>
                             </div>
                         )}
                     </div>
@@ -271,7 +274,10 @@ export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProp
                                             onClick={() => { setSelectedTeamId(team.id); resetAction(); }}
                                         >
                                             <span className="font-semibold">{team.name}</span>
-                                            <span className={team.balance < 0 ? 'text-red-500' : ''}>{GAME_CONFIG.CURRENCY_SYMBOL}{team.balance.toLocaleString()}</span>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <span className={team.balance < 0 ? 'text-red-500' : ''}>{GAME_CONFIG.CURRENCY_SYMBOL}{team.balance.toLocaleString()}</span>
+                                                <span className="text-xs text-muted-foreground">Laps: {team.lapsCompleted || 0}</span>
+                                            </div>
                                         </Button>
                                     ))}
                                 </div>
@@ -328,13 +334,28 @@ export function ModeratorGameConsole({ initialCohort }: ModeratorGameConsoleProp
                                                                 <span className="font-bold">{decisionResult.property.name}</span>
                                                                 <Badge variant="destructive">Owned by {decisionResult.ownerName}</Badge>
                                                             </div>
-                                                            <div className="text-2xl font-bold text-red-600 flex items-center gap-2">
+                                                            <div className="text-2xl font-bold text-red-600 flex items-center gap-2 mt-4">
                                                                 <IndianRupee className="w-5 h-5" />
                                                                 {decisionResult.rentAmount.toLocaleString()} Rent
                                                             </div>
-                                                            <Button className="w-full" onClick={handleConfirmRent}>
-                                                                Pay Rent
-                                                            </Button>
+                                                            <div className="text-sm text-muted-foreground italic mb-4">
+                                                                Includes rent scaling for {decisionResult.property.upgradeLevel === 'HOUSE' ? '1 House' : decisionResult.property.upgradeLevel === 'HOTEL' ? '1 Hotel' : 'a basic property'} if built.
+                                                            </div>
+                                                            <div className="flex flex-col gap-2">
+                                                                <Button className="w-full" onClick={handleConfirmRent}>
+                                                                    Pay Rent
+                                                                </Button>
+                                                                <Button 
+                                                                    variant="outline" 
+                                                                    className="w-full text-destructive hover:bg-destructive/10" 
+                                                                    onClick={() => {
+                                                                        toast({ title: 'Rent Skipped', description: 'Reminder: You must manually adjust their credit score.', variant: 'destructive' });
+                                                                        resetAction();
+                                                                    }}
+                                                                >
+                                                                    Skip Rent (Penalize Credit)
+                                                                </Button>
+                                                            </div>
                                                          </>
                                                     )}
                                                     

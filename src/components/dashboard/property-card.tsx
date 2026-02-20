@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Property } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { Building2, Utensils, GraduationCap, Home, BedDouble, HelpCircle } from 'lucide-react';
+import { Building2, Utensils, GraduationCap, Home, BedDouble, HelpCircle, Mic, Presentation } from 'lucide-react';
 import { BASE_PROPERTIES } from '@/lib/game-constants';
 
 interface PropertyCardProps {
@@ -19,10 +19,11 @@ export function PropertyCard({ property, highlightOwned }: PropertyCardProps) {
     const getGroupColor = (groupName: string) => {
         switch (groupName) {
             case 'Start': return 'bg-slate-500 text-white';
-            case 'Hangout': return 'bg-orange-400 text-white';
-            case 'Academic': return 'bg-blue-600 text-white';
-            case 'Food': return 'bg-red-500 text-white';
+            case 'Academic Blocks': return 'bg-blue-600 text-white';
+            case 'Food Street': return 'bg-red-500 text-white';
             case 'Hostel': return 'bg-purple-600 text-white';
+            case 'Amphitheatre': return 'bg-orange-500 text-white';
+            case 'Auditorium': return 'bg-emerald-600 text-white';
             default: return 'bg-gray-400 text-white';
         }
     };
@@ -30,10 +31,11 @@ export function PropertyCard({ property, highlightOwned }: PropertyCardProps) {
     const getGroupIcon = (groupName: string) => {
         switch (groupName) {
             case 'Start': return <Home className="h-4 w-4" />;
-            case 'Hangout': return <Building2 className="h-4 w-4" />;
-            case 'Academic': return <GraduationCap className="h-4 w-4" />;
-            case 'Food': return <Utensils className="h-4 w-4" />;
+            case 'Academic Blocks': return <Building2 className="h-4 w-4" />;
+            case 'Food Street': return <Utensils className="h-4 w-4" />;
             case 'Hostel': return <BedDouble className="h-4 w-4" />;
+            case 'Amphitheatre': return <Mic className="h-4 w-4" />;
+            case 'Auditorium': return <Presentation className="h-4 w-4" />;
             default: return <HelpCircle className="h-4 w-4" />;
         }
     };

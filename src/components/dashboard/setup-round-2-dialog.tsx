@@ -34,7 +34,7 @@ export function SetupRound2Dialog({ children, gameConfig }: SetupRound2DialogPro
     setLoading(true);
     try {
         // HARDCODED Event ID as per user request to bypass index/detection issues
-        const eventId = 'GjBSF3C7Ox7V0zwIyhBP';
+        const eventId = 'OiOVoKBIKHBATsOlzTpK';
         console.log("SetupRound2: Using Hardcoded Event ID:", eventId);
 
         const cohortCount = await createCohorts(firestore, eventId, numCohorts);
@@ -57,7 +57,7 @@ export function SetupRound2Dialog({ children, gameConfig }: SetupRound2DialogPro
       if (!confirm('DANGER: This will delete ALL cohorts and properties for this event. Are you sure?')) return;
       setLoading(true);
       try {
-          const eventId = 'GjBSF3C7Ox7V0zwIyhBP';
+          const eventId = 'OiOVoKBIKHBATsOlzTpK';
           const count = await resetRound2Data(firestore, eventId);
           toast({
               title: 'Reset Complete',
