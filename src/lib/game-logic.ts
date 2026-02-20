@@ -44,11 +44,19 @@ export async function getLandOnPropertyStatus(
     }
 
     if (property.ownerTeamId) {
-        // Simple rent calculation for now. Can be expanded with multipliers/houses later.
+        // Rent calculation based on upgrade level
+        let rentAmount = property.rentValue || property.placeRent || 0;
+
+        if (property.upgradeLevel === 'HOUSE' && property.houseRent) {
+            rentAmount = property.houseRent;
+        } else if (property.upgradeLevel === 'HOTEL' && property.hotelRent) {
+            rentAmount = property.hotelRent;
+        }
+
         return {
             status: 'OWNED_BY_OTHER',
             property,
-            rentAmount: property.rentValue,
+            rentAmount,
             ownerName: property.ownerTeamName || 'Unknown Team'
         };
     }
@@ -163,8 +171,14 @@ export async function executeRentPayment(
 
     const toTeam = toTeamDoc.data() as Team;
 
-    // Rent Amount logic
-    const rentAmount = property.rentValue;
+    // Rent Amount logic based on upgrade level
+    let rentAmount = property.rentValue || property.placeRent || 0;
+
+    if (property.upgradeLevel === 'HOUSE' && property.houseRent) {
+        rentAmount = property.houseRent;
+    } else if (property.upgradeLevel === 'HOTEL' && property.hotelRent) {
+        rentAmount = property.hotelRent;
+    }
 
     if (fromTeam.balance < rentAmount) {
         throw new Error('INSUFFICIENT_FUNDS');
@@ -240,11 +254,12 @@ export async function executePassGo(
 
     const team = teamDoc.data() as Team;
     const newBalance = team.balance + SALARY_AMOUNT;
+    const newLaps = (team.lapsCompleted || 0) + 1;
 
     // Write Batch
     const batch = writeBatch(firestore);
 
-    batch.update(teamRef, { balance: newBalance });
+    batch.update(teamRef, { balance: newBalance, lapsCompleted: newLaps });
 
     const tRef = doc(collection(firestore, 'events', eventId, 'teams', team.id, 'transactions'));
     const t: Transaction = {
@@ -554,9 +569,9 @@ export async function calculateLeaderboard(
 ) {
     // defaults
     const weights = {
-        cash: gameConfig?.cashWeight ?? 1,
-        property: gameConfig?.propertyWeight ?? 1,
-        credit: gameConfig?.creditWeight ?? 1
+        cash: gameConfig?.cashWeight ?? 0.4,
+        property: gameConfig?.propertyWeight ?? 0.3,
+        credit: gameConfig?.creditWeight ?? 0.3
     };
 
     const teamsRef = collection(firestore, 'events', eventId, 'teams');
@@ -607,7 +622,8 @@ export async function calculateLeaderboard(
             cohortId: team.cohortId,
             cash: cashValue,
             propertyValue: propertyValue,
-            creditScore: creditValue
+            creditScore: creditValue,
+            lapsCompleted: team.lapsCompleted || 0
         };
     });
 
@@ -622,7 +638,8 @@ export async function calculateLeaderboard(
         rank: index + 1,
         cash: item.cash,
         propertyValue: item.propertyValue,
-        creditScore: item.creditScore
+        creditScore: item.creditScore,
+        lapsCompleted: item.lapsCompleted
     }));
 
     const eventLeaderboardRef = doc(collection(firestore, 'leaderboards'), eventId);
@@ -648,7 +665,8 @@ export async function calculateLeaderboard(
             rank: index + 1,
             cash: item.cash,
             propertyValue: item.propertyValue,
-            creditScore: item.creditScore
+            creditScore: item.creditScore,
+            lapsCompleted: item.lapsCompleted
         }));
 
         const cohortRef = doc(collection(firestore, 'leaderboards'), cohortId);

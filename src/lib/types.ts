@@ -30,6 +30,7 @@ export type Team = {
   qualifiedToNextRound?: boolean;
   currentScore?: number;
   rankInCohort?: number;
+  lapsCompleted?: number;
 };
 
 export type TransactionType =
@@ -214,6 +215,7 @@ export type LeaderboardRanking = {
   cash: number;
   propertyValue: number;
   creditScore: number;
+  lapsCompleted?: number;
 }
 
 export type Leaderboard = {
