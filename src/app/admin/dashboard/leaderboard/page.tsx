@@ -85,6 +85,7 @@ export default function AdminLeaderboardPage() {
                             <TableHead className="text-right">Cash Balance</TableHead>
                             <TableHead className="text-right">Property Value</TableHead>
                             <TableHead className="text-right">Credit Score</TableHead>
+                            <TableHead className="text-right">Laps</TableHead>
                             <TableHead className="text-right">Total Score</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -101,6 +102,7 @@ export default function AdminLeaderboardPage() {
                                 <TableCell className="text-right font-mono">₹{entry.cash?.toLocaleString() ?? 0}</TableCell>
                                 <TableCell className="text-right font-mono">₹{entry.propertyValue?.toLocaleString() ?? 0}</TableCell>
                                 <TableCell className="text-right font-mono">{entry.creditScore ?? 0}</TableCell>
+                                <TableCell className="text-right font-mono">{entry.lapsCompleted ?? 0}</TableCell>
                                 <TableCell className="text-right font-bold text-lg">{entry.score.toFixed(2)}</TableCell>
                             </TableRow>
                         ))}
