@@ -101,7 +101,16 @@ function PropertyTable({ properties, teams }: { properties: Property[], teams: T
                         <TableCell>₹{(prop.placeRent || prop.rentValue)?.toLocaleString() ?? '-'}</TableCell>
                         <TableCell>{prop.houseRent ? `₹${prop.houseRent.toLocaleString()}` : '-'}</TableCell>
                         <TableCell>{prop.hotelRent ? `₹${prop.hotelRent.toLocaleString()}` : '-'}</TableCell>
-                        <TableCell>{prop.ownerTeamName ?? '-'}</TableCell>
+                        <TableCell>
+                            {prop.status === 'SEIZED' && prop.previousOwnerName ? (
+                                <span className="text-destructive font-medium uppercase text-[10px] flex flex-col">
+                                    <span className="text-muted-foreground lowercase italic">Seized from</span>
+                                    {prop.previousOwnerName}
+                                </span>
+                            ) : (
+                                prop.ownerTeamName ?? '-'
+                            )}
+                        </TableCell>
                         <TableCell>
                             <div className="flex flex-col gap-1 items-start">
                                 <Badge variant={prop.status === 'OWNED' ? 'default' : prop.status === 'SEIZED' ? 'destructive' : 'secondary'}>{prop.status}</Badge>
