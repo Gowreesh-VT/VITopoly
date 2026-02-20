@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { TeamQrDialog } from '@/components/dashboard/team-qr-dialog';
 import { format } from 'date-fns';
-import { Wallet, TrendingUp, HandCoins, Activity, ArrowRight, Calendar, Trophy, ShieldCheck, Star, History } from 'lucide-react';
+import { Wallet, TrendingUp, HandCoins, Activity, ArrowRight, Calendar, Trophy, ShieldCheck, Star, History, RotateCw } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, orderBy, limit } from 'firebase/firestore';
 import type { Team, Transaction, Loan, Event } from '@/lib/types';
@@ -102,6 +102,7 @@ export default function TeamDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Current Balance" value={formatCurrency(team.balance)} icon={<Wallet />} />
         <StatCard title="Credit Score" value={team.creditScore} icon={<TrendingUp />} />
+        <StatCard title="Laps Completed" value={team.lapsCompleted || 0} icon={<RotateCw />} />
 
         <StatCard id="loan-status" title="Loan Status" value={activeLoan ? formatCurrency(activeLoan.amount) : 'None'} icon={<HandCoins />} description={activeLoan ? 'Active loan' : 'No active loans'} />
         <StatCard title="Account Status" value={team.status} icon={<Activity />} />
