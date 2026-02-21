@@ -83,7 +83,6 @@ export function DefaultTeamDialog({ team, adminId, onSuccess, trigger }: Default
                 <li>Mark <strong>{team.name}</strong> as eliminated.</li>
                 <li>Seize all their properties.</li>
                 <li>Convert properties into <strong>Auction Tokens</strong>.</li>
-                <li>Reset their balance to 0.</li>
               </ul>
             </div>
           </DialogDescription>

@@ -3,6 +3,7 @@ export const BASE_PROPERTIES = [
   // 🟦 Academic Blocks
   { name: 'AB1', baseValue: 1400, rentValue: 220, group: 'Academic Blocks', houseValue: 440, hotelValue: 760, houseRent: 500, hotelRent: 950, placeRent: 220 },
   { name: 'AB2', baseValue: 1600, rentValue: 260, group: 'Academic Blocks', houseValue: 520, hotelValue: 880, houseRent: 600, hotelRent: 1100, placeRent: 260 },
+  { name: 'AB3', baseValue: 1700, rentValue: 280, group: 'Academic Blocks', houseValue: 550, hotelValue: 920, houseRent: 650, hotelRent: 1200, placeRent: 280 },
   { name: 'AB4', baseValue: 1800, rentValue: 300, group: 'Academic Blocks', houseValue: 575, hotelValue: 1000, houseRent: 700, hotelRent: 1250, placeRent: 300 },
   { name: 'AB5', baseValue: 2000, rentValue: 340, group: 'Academic Blocks', houseValue: 640, hotelValue: 1120, houseRent: 800, hotelRent: 1450, placeRent: 340 },
 
@@ -24,6 +25,7 @@ export const BASE_PROPERTIES = [
   { name: 'Gymkhana', baseValue: 2800, rentValue: 480, group: 'Food Street', houseValue: 900, hotelValue: 1570, houseRent: 1100, hotelRent: 2200, placeRent: 480 },
   { name: 'Hunger', baseValue: 2500, rentValue: 430, group: 'Food Street', houseValue: 800, hotelValue: 1400, houseRent: 950, hotelRent: 1900, placeRent: 430 },
   { name: 'NS', baseValue: 2900, rentValue: 500, group: 'Food Street', houseValue: 930, hotelValue: 1620, houseRent: 1200, hotelRent: 2300, placeRent: 500 },
+  {name: 'Dominos', baseValue: 2700, rentValue: 460, group: 'Food Street', houseValue: 860, hotelValue: 1510, houseRent: 1050, hotelRent: 2100, placeRent: 460},
 
   // 🟧 Auditoriums (Premium)
   { name: 'MG', baseValue: 3200, rentValue: 520, group: 'Auditorium', houseValue: 1020, hotelValue: 1790, houseRent: 1200, hotelRent: 2400, placeRent: 520 },

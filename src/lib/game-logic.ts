@@ -352,9 +352,7 @@ export async function executeTeamDefault(
     // Set status to SUSPENDED (or ELIMINATED if we had that state)
     batch.update(teamRef, {
         status: 'SUSPENDED',
-        isEliminated: true,
-        balance: 0, // Reset balance to 0
-        creditScore: 0 // Reset credit score to 0
+        isEliminated: true
     });
 
     // NOTE: Seizing assets requires querying, which is handled by 'seizeTeamAssets' helper.
@@ -387,9 +385,7 @@ export async function seizeTeamAssets(firestore: Firestore, teamId: string, admi
     // 1. Mark Team Eliminated
     batch.update(teamRef, {
         status: 'SUSPENDED', // Using SUSPENDED as proxy for Eliminated for now
-        isEliminated: true,
-        balance: 0,
-        creditScore: 0
+        isEliminated: true
     });
 
     // 2. Seize Properties -> Convert to Auction Token Candidates
