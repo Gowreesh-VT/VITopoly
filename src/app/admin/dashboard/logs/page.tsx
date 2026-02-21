@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, orderBy, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, orderBy, collectionGroup, limit } from 'firebase/firestore';
 import type { Transaction, Cohort, Team } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -47,7 +47,8 @@ export default function AdminLogsPage() {
           collectionGroup(firestore, 'transactions'), 
           where('eventId', '==', eventId),
           where('adminId', '==', user.uid),
-          orderBy('timestamp', 'desc')
+          orderBy('timestamp', 'desc'),
+          limit(100)
         );
       }, [firestore, eventId, user]);
     const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);

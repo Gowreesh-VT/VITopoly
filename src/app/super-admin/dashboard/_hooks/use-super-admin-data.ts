@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, collectionGroup, query, orderBy } from 'firebase/firestore';
+import { collection, collectionGroup, query, orderBy, limit } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useGameConfig } from '@/firebase';
 import type {
   Team,
@@ -37,7 +37,7 @@ export function useSuperAdminData() {
   );
 
   const { data: ledger, isLoading: isLedgerLoading } = useCollection<Transaction>(
-    useMemoFirebase(() => user ? query(collectionGroup(firestore, 'transactions'), orderBy('timestamp', 'desc')) : null, [firestore, user]),
+    useMemoFirebase(() => user ? query(collectionGroup(firestore, 'transactions'), orderBy('timestamp', 'desc'), limit(100)) : null, [firestore, user]),
   );
 
   const { data: loans, isLoading: areLoansLoading } = useCollection<Loan>(

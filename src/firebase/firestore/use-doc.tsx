@@ -72,17 +72,30 @@ export function useDoc<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        const contextualError = new FirestorePermissionError({
-          operation: 'get',
-          path: memoizedDocRef.path,
-        })
+        console.error(`[useDoc] Firestore error on path "${memoizedDocRef.path}":`, error.code, error.message);
 
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
+        if (error.code === 'permission-denied') {
+          const contextualError = new FirestorePermissionError({
+            operation: 'get',
+            path: memoizedDocRef.path,
+          });
 
-        // trigger global error propagation
-        errorEmitter.emit('permission-error', contextualError);
+          setError(contextualError);
+          setData(null);
+          setIsLoading(false);
+
+          // trigger global error propagation
+          errorEmitter.emit('permission-error', contextualError);
+        } else if (error.code === 'resource-exhausted') {
+          const quotaError = new Error("Firebase Quota Exceeded. The daily usage limit for this project has been reached.");
+          setError(quotaError);
+          setData(null);
+          setIsLoading(false);
+        } else {
+          setError(error);
+          setData(null);
+          setIsLoading(false);
+        }
       }
     );
 

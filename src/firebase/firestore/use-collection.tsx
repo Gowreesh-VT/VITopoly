@@ -138,6 +138,12 @@ export function useCollection<T = any>(
 
           // Trigger global error propagation
           errorEmitter.emit('permission-error', contextualError);
+        } else if (err.code === 'resource-exhausted') {
+          const quotaError = new Error("Firebase Quota Exceeded. The daily usage limit for this project has been reached. Please check the Firebase console for details.");
+          setError(quotaError);
+          setData(null);
+          setIsLoading(false);
+          console.error(`[useCollection] Quota error:`, err);
         } else {
           // For non-permission errors (missing index, network, etc.),
           // don't wrap as permission error

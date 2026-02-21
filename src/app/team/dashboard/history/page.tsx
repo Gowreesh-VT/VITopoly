@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { History } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
 import type { Team, Transaction } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { formatCurrency } from '@/lib/utils';
@@ -34,7 +34,7 @@ export default function HistoryPage() {
   const transactionsQuery = useMemoFirebase(() => {
     if (!teamId || !eventId) return null;
     const baseQuery = collection(firestore, 'events', eventId, 'teams', teamId, 'transactions');
-    return query(baseQuery, orderBy('timestamp', 'desc'));
+    return query(baseQuery, orderBy('timestamp', 'desc'), limit(100));
   }, [firestore, teamId, eventId]);
   const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, orderBy, doc, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, collectionGroup, limit } from 'firebase/firestore';
 import type { Team, Cohort, Loan } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -43,7 +43,7 @@ export default function AdminTeamsPage() {
     const { data: teams, isLoading: areTeamsLoading } = useCollection<Team>(teamsQuery);
 
     const loansQuery = useMemoFirebase(() => (
-        eventId ? query(collectionGroup(firestore, 'loans'), where('eventId', '==', eventId)) : null
+        eventId ? query(collectionGroup(firestore, 'loans'), where('eventId', '==', eventId), limit(100)) : null
     ), [firestore, eventId]);
     const { data: loans } = useCollection<Loan>(loansQuery);
 

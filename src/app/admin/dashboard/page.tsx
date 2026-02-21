@@ -101,7 +101,8 @@ export default function AdminDashboardPage() {
       collectionGroup(firestore, 'transactions'), 
       where('eventId', '==', eventId),
       where('adminId', '==', user.uid),
-      orderBy('timestamp', 'desc')
+      orderBy('timestamp', 'desc'),
+      limit(100)
     );
   }, [firestore, eventId, user]);
   const { data: transactions, isLoading: areTransactionsLoading } = useCollection<Transaction>(transactionsQuery);
