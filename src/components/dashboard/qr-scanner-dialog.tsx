@@ -12,59 +12,104 @@ type QrScannerDialogProps = {
 
 export function QrScannerDialog({ onScan, children }: QrScannerDialogProps) {
   const [open, setOpen] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (open) {
+      const getCameraPermission = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          setHasCameraPermission(true);
+
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+          // Stop tracks when dialog closes
+          return () => {
+            stream.getTracks().forEach(track => track.stop());
+          };
+        } catch (error) {
+          console.error('Error accessing camera:', error);
+          setHasCameraPermission(false);
+          toast({
+            variant: 'destructive',
+            title: 'Camera Access Denied',
+            description: 'Please enable camera permissions in your browser settings to use the scanner.',
+          });
+        }
+      };
+
+      const cleanup = getCameraPermission();
+      
+      return () => {
+        // @ts-ignore
+        if (cleanup && cleanup.then) {
+            // @ts-ignore
+            cleanup.then(c => c && c());
+        }
+      };
+    }
+  }, [open, toast]);
 
   const handleDecode = (result: string) => {
     onScan(result);
     setOpen(false);
     toast({
       title: 'Scan Successful',
-      description: `Scanned data identified.`,
+      description: `Scanned data: ${result}`,
     });
   };
 
   const handleError = (error: any) => {
-    console.error('Scanner Error:', error);
-    // Only show toast for meaningful errors
-    if (error.name !== "NotFoundException" && error.name !== "NotAllowedError") {
+    console.error(error);
+    if (error.name !== "NotFoundException") { // Ignore "not found" errors which happen during scanning
         toast({
             variant: 'destructive',
             title: 'Scan Error',
             description: error?.message || 'Failed to scan QR code.',
         });
     }
-    
-    if (error.name === "NotAllowedError") {
-        toast({
-            variant: 'destructive',
-            title: 'Permission Denied',
-            description: 'Please allow camera access in your browser settings.',
-        });
-    }
   };
+  
+  // Conditionally render QrScanner only when permission is granted
+  const renderScanner = () => {
+      if (hasCameraPermission === null) {
+          return <div className="w-full aspect-square bg-muted animate-pulse" />;
+      }
+      if (hasCameraPermission) {
+          return (
+             <div className="overflow-hidden rounded-md">
+                 <Scanner
+                    onScan={(result) => result?.[0]?.rawValue && handleDecode(result[0].rawValue)}
+                    onError={handleError}
+                    styles={{ container: { width: '100%', paddingTop: '100%' }, video: { objectFit: 'cover' } }}
+                />
+             </div>
+          )
+      }
+      return (
+         <Alert variant="destructive">
+            <AlertTitle>Camera Access Required</AlertTitle>
+            <AlertDescription>
+                Please allow camera access in your browser to use the scanner.
+            </AlertDescription>
+         </Alert>
+      )
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Scan QR Code</DialogTitle>
           <DialogDescription>
             Center the QR code within the frame to scan it.
           </DialogDescription>
         </DialogHeader>
-        <div className="mt-4 overflow-hidden rounded-xl border bg-black aspect-square relative">
-            <Scanner
-                onScan={(result) => {
-                    if (result?.[0]?.rawValue) {
-                        handleDecode(result[0].rawValue);
-                    }
-                }}
-                onError={handleError}
-                allowMultiple={false}
-                scanDelay={300}
-            />
-        </div>
+        {renderScanner()}
       </DialogContent>
     </Dialog>
   );

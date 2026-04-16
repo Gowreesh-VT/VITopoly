@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { UpdateGameStateDialog } from '@/components/dashboard/update-game-state-dialog';
-import { SetupRound2Dialog } from '@/components/dashboard/setup-round-2-dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { GameConfig, Team, Admin, Loan, Transaction } from '@/lib/types';
 
@@ -71,18 +70,11 @@ export function OverviewTab({
             <CardDescription>Control the current state of the entire event.</CardDescription>
           </div>
           {gameConfig ? (
-            <div className="flex gap-2">
-                <SetupRound2Dialog gameConfig={gameConfig}>
-                    <Button variant="secondary">
-                        <Users className="mr-2 h-4 w-4" /> Setup Round 2
-                    </Button>
-                </SetupRound2Dialog>
-                <UpdateGameStateDialog gameConfig={gameConfig}>
-                    <Button variant="outline">
-                        <Settings className="mr-2 h-4 w-4" /> Update State
-                    </Button>
-                </UpdateGameStateDialog>
-            </div>
+            <UpdateGameStateDialog gameConfig={gameConfig}>
+              <Button variant="outline">
+                <Settings className="mr-2 h-4 w-4" /> Update State
+              </Button>
+            </UpdateGameStateDialog>
           ) : (
             <Button onClick={handleInitializeGameState}>
               <Settings className="mr-2 h-4 w-4" /> Initialize Game State

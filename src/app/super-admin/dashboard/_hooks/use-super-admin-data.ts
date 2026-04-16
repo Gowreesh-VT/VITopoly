@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, collectionGroup, query, orderBy, limit } from 'firebase/firestore';
+import { collection, collectionGroup, query, orderBy } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useGameConfig } from '@/firebase';
 import type {
   Team,
@@ -21,39 +21,39 @@ export function useSuperAdminData() {
   const { gameConfig, isGameConfigLoading } = useGameConfig();
 
   const { data: events, isLoading: areEventsLoading } = useCollection<Event>(
-    useMemoFirebase(() => user ? query(collection(firestore, 'events'), orderBy('startDate', 'desc')) : null, [firestore, user]),
+    useMemoFirebase(() => query(collection(firestore, 'events'), orderBy('startDate', 'desc')), [firestore]),
   );
 
   const { data: teams, isLoading: areTeamsLoading } = useCollection<Team>(
-    useMemoFirebase(() => user ? query(collectionGroup(firestore, 'teams'), orderBy('name')) : null, [firestore, user]),
+    useMemoFirebase(() => query(collectionGroup(firestore, 'teams'), orderBy('name')), [firestore]),
   );
 
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(
-    useMemoFirebase(() => user ? collection(firestore, 'users') : null, [firestore, user]),
+    useMemoFirebase(() => collection(firestore, 'users'), [firestore]),
   );
 
   const { data: admins, isLoading: areAdminsLoading } = useCollection<Admin>(
-    useMemoFirebase(() => user ? collectionGroup(firestore, 'admins') : null, [firestore, user]),
+    useMemoFirebase(() => collectionGroup(firestore, 'admins'), [firestore]),
   );
 
   const { data: ledger, isLoading: isLedgerLoading } = useCollection<Transaction>(
-    useMemoFirebase(() => user ? query(collectionGroup(firestore, 'transactions'), orderBy('timestamp', 'desc'), limit(100)) : null, [firestore, user]),
+    useMemoFirebase(() => query(collectionGroup(firestore, 'transactions'), orderBy('timestamp', 'desc')), [firestore]),
   );
 
   const { data: loans, isLoading: areLoansLoading } = useCollection<Loan>(
-    useMemoFirebase(() => user ? collectionGroup(firestore, 'loans') : null, [firestore, user]),
+    useMemoFirebase(() => collectionGroup(firestore, 'loans'), [firestore]),
   );
 
   const { data: cohorts, isLoading: areCohortsLoading } = useCollection<Cohort>(
-    useMemoFirebase(() => user ? query(collection(firestore, 'cohorts'), orderBy('name')) : null, [firestore, user]),
+    useMemoFirebase(() => query(collection(firestore, 'cohorts'), orderBy('name')), [firestore]),
   );
 
   const { data: properties, isLoading: arePropertiesLoading } = useCollection<Property>(
-    useMemoFirebase(() => user ? query(collection(firestore, 'properties'), orderBy('name')) : null, [firestore, user]),
+    useMemoFirebase(() => query(collection(firestore, 'properties'), orderBy('name')), [firestore]),
   );
 
   const { data: leaderboards, isLoading: areLeaderboardsLoading } = useCollection<Leaderboard>(
-    useMemoFirebase(() => user ? collection(firestore, 'leaderboards') : null, [firestore, user]),
+    useMemoFirebase(() => collection(firestore, 'leaderboards'), [firestore]),
   );
 
   const isLoading =
